@@ -12,6 +12,58 @@ public sealed class AppUser : AuditableEntity
     public UserRole Role { get; set; }
     public bool IsActive { get; set; } = true;
     public DateTime? LastLoginAtUtc { get; set; }
+    public ICollection<AppUserRole> RoleAssignments { get; set; } = new List<AppUserRole>();
+}
+
+public sealed class SecurityRole : AuditableEntity
+{
+    public string Code { get; set; } = string.Empty;
+    public string Name { get; set; } = string.Empty;
+    public string? Description { get; set; }
+    public bool IsSystemRole { get; set; }
+    public bool IsActive { get; set; } = true;
+    public ICollection<AppUserRole> UserAssignments { get; set; } = new List<AppUserRole>();
+    public ICollection<RolePermission> Permissions { get; set; } = new List<RolePermission>();
+}
+
+public sealed class SecurityPermission : AuditableEntity
+{
+    public string Code { get; set; } = string.Empty;
+    public string Name { get; set; } = string.Empty;
+    public string? Description { get; set; }
+    public ICollection<RolePermission> RolePermissions { get; set; } = new List<RolePermission>();
+}
+
+public sealed class SecurityScreen : AuditableEntity
+{
+    public string Code { get; set; } = string.Empty;
+    public string Name { get; set; } = string.Empty;
+    public string Route { get; set; } = string.Empty;
+    public string? Icon { get; set; }
+    public Guid? ParentId { get; set; }
+    public SecurityScreen? Parent { get; set; }
+    public int DisplayOrder { get; set; }
+    public bool IsActive { get; set; } = true;
+    public ICollection<SecurityScreen> Children { get; set; } = new List<SecurityScreen>();
+    public ICollection<RolePermission> RolePermissions { get; set; } = new List<RolePermission>();
+}
+
+public sealed class AppUserRole : AuditableEntity
+{
+    public Guid UserId { get; set; }
+    public AppUser User { get; set; } = null!;
+    public Guid RoleId { get; set; }
+    public SecurityRole Role { get; set; } = null!;
+}
+
+public sealed class RolePermission : AuditableEntity
+{
+    public Guid RoleId { get; set; }
+    public SecurityRole Role { get; set; } = null!;
+    public Guid ScreenId { get; set; }
+    public SecurityScreen Screen { get; set; } = null!;
+    public Guid PermissionId { get; set; }
+    public SecurityPermission Permission { get; set; } = null!;
 }
 
 public sealed class TestExecution : AuditableEntity

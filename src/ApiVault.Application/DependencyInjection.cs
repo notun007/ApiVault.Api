@@ -9,6 +9,7 @@ public static class DependencyInjection
     {
         services.AddScoped<ApiCatalogService>();
         services.AddScoped<ApiProjectService>();
+        services.AddScoped<SecurityService>();
         services.AddScoped<ProjectService>();
         services.AddScoped<ReferenceDataService>();
         services.AddScoped<AuthService>();

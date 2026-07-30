@@ -92,6 +92,53 @@ public sealed class AuthService(IApplicationDbContext dbContext, IPasswordHasher
 
 public sealed class UserAdministrationService(IApplicationDbContext dbContext, IPasswordHasher passwordHasher)
 {
+    public async Task<IReadOnlyList<UserAccessResponse>> GetAccessAsync(CancellationToken cancellationToken) =>
+        await dbContext.AppUsers.AsNoTracking().Include(x => x.RoleAssignments).ThenInclude(x => x.Role)
+            .OrderBy(x => x.Username)
+            .Select(x => new UserAccessResponse
+            {
+                UserId = x.Id,
+                Username = x.Username,
+                DisplayName = x.DisplayName,
+                IsActive = x.IsActive,
+                Roles = x.RoleAssignments.OrderBy(a => a.Role.Name).Select(a => new UserRoleAssignmentResponse
+                {
+                    RoleId = a.RoleId,
+                    Code = a.Role.Code,
+                    Name = a.Role.Name,
+                    IsActive = a.Role.IsActive
+                }).ToList()
+            }).ToListAsync(cancellationToken);
+
+    public async Task UpdateRolesAsync(Guid userId, UpdateUserRolesRequest request, CancellationToken cancellationToken)
+    {
+        var user = await dbContext.AppUsers.Include(x => x.RoleAssignments)
+            .SingleOrDefaultAsync(x => x.Id == userId, cancellationToken)
+            ?? throw new NotFoundException("User was not found.");
+        var roleIds = request.RoleIds.Distinct().ToHashSet();
+        var roles = await dbContext.SecurityRoles.Where(x => roleIds.Contains(x.Id) && x.IsActive).ToListAsync(cancellationToken);
+        if (roles.Count != roleIds.Count)
+            throw new RequestValidationException("One or more selected roles are invalid or inactive.");
+        if (roles.Count == 0)
+            throw new RequestValidationException("At least one role must be assigned to the user.");
+
+        dbContext.AppUserRoles.RemoveRange(user.RoleAssignments);
+        dbContext.AppUserRoles.AddRange(roles.Select(role => new AppUserRole { UserId = user.Id, RoleId = role.Id }));
+
+        var legacyRole = roles.Select(x => x.Code).Select(x => x switch
+        {
+            "ADMIN" => (int?)UserRole.Admin,
+            "API_OWNER" => (int?)UserRole.ApiOwner,
+            "TESTER" => (int?)UserRole.Tester,
+            "VIEWER" => (int?)UserRole.Viewer,
+            _ => null
+        }).Where(x => x.HasValue).Select(x => x!.Value).OrderBy(x => x).FirstOrDefault();
+        if (legacyRole != 0)
+            user.Role = (UserRole)legacyRole;
+
+        await dbContext.SaveChangesAsync(cancellationToken);
+    }
+
     public async Task<IReadOnlyList<UserResponse>> GetAllAsync(CancellationToken cancellationToken) =>
         await dbContext.AppUsers.AsNoTracking().OrderBy(x => x.Username)
             .Select(x => new UserResponse

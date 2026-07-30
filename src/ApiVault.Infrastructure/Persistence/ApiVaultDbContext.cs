@@ -22,6 +22,11 @@ public sealed class ApiVaultDbContext(
     public DbSet<Project> Projects => Set<Project>();
     public DbSet<ProjectApiVersion> ProjectApiVersions => Set<ProjectApiVersion>();
     public DbSet<AppUser> AppUsers => Set<AppUser>();
+    public DbSet<SecurityRole> SecurityRoles => Set<SecurityRole>();
+    public DbSet<SecurityPermission> SecurityPermissions => Set<SecurityPermission>();
+    public DbSet<SecurityScreen> SecurityScreens => Set<SecurityScreen>();
+    public DbSet<AppUserRole> AppUserRoles => Set<AppUserRole>();
+    public DbSet<RolePermission> RolePermissions => Set<RolePermission>();
     public DbSet<TestExecution> TestExecutions => Set<TestExecution>();
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
 

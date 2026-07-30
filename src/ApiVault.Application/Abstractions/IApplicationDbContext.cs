@@ -16,6 +16,11 @@ public interface IApplicationDbContext
     DbSet<Project> Projects { get; }
     DbSet<ProjectApiVersion> ProjectApiVersions { get; }
     DbSet<AppUser> AppUsers { get; }
+    DbSet<SecurityRole> SecurityRoles { get; }
+    DbSet<SecurityPermission> SecurityPermissions { get; }
+    DbSet<SecurityScreen> SecurityScreens { get; }
+    DbSet<AppUserRole> AppUserRoles { get; }
+    DbSet<RolePermission> RolePermissions { get; }
     DbSet<TestExecution> TestExecutions { get; }
     DbSet<AuditLog> AuditLogs { get; }
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
