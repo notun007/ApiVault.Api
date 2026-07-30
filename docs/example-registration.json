@@ -1,0 +1,34 @@
+{
+  "api": {
+    "name": "Customer Profile Inquiry",
+    "apiProjectName": "CBS Customer Services",
+    "description": "Returns a customer profile from the core banking platform.",
+    "ownershipType": "Internal",
+    "protocol": "Rest",
+    "creatorName": "Core Banking Integration Team",
+    "creatorEmail": "integration-team@example.invalid",
+    "businessAreaId": "00000000-0000-0000-0000-000000000000",
+    "developmentTeamId": "00000000-0000-0000-0000-000000000000"
+  },
+  "version": {
+    "version": "v1.2.0",
+    "releaseName": "Customer Profile Expansion",
+    "lifecycleStatus": "Active",
+    "authenticationType": "ApiKey",
+    "authenticationInstructions": "Send the approved client ID and secret in gateway headers.",
+    "authenticationConfigJson": "{\"headerName\":\"X-IBM-Client-Secret\"}",
+    "maxRequestBytes": 1048576,
+    "maxResponseBytes": 5242880,
+    "timeoutSeconds": 30,
+    "isCurrent": true
+  },
+  "endpoint": {
+    "name": "Get customer profile",
+    "relativePath": "/customers/{customerId}",
+    "httpMethod": "GET",
+    "requestHeadersJson": "{\"Accept\":\"application/json\",\"X-IBM-Client-Id\":\"{{secret:CLIENT_ID}}\",\"X-IBM-Client-Secret\":\"{{secret:CLIENT_SECRET}}\"}",
+    "pathParametersJson": "[{\"name\":\"customerId\",\"required\":true,\"type\":\"string\"}]",
+    "responseBodySample": "{\"customerId\":\"123456\",\"status\":\"ACTIVE\"}",
+    "successStatusCodesJson": "[200]"
+  }
+}

@@ -1,0 +1,22 @@
+@ApiVault_HostAddress = https://localhost:7185
+@token = REPLACE_AFTER_LOGIN
+
+### Health
+GET {{ApiVault_HostAddress}}/health
+
+### Login
+POST {{ApiVault_HostAddress}}/api/auth/login
+Content-Type: application/json
+
+{
+  "username": "admin",
+  "password": "REPLACE_ME"
+}
+
+### Business areas
+GET {{ApiVault_HostAddress}}/api/reference-data/business-areas
+Authorization: Bearer {{token}}
+
+### Search APIs
+GET {{ApiVault_HostAddress}}/api/apis?page=1&pageSize=25
+Authorization: Bearer {{token}}

@@ -1,0 +1,40 @@
+﻿<Project Sdk="Microsoft.NET.Sdk.Web">
+
+	<PropertyGroup>
+		<TargetFramework>net10.0</TargetFramework>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<Nullable>enable</Nullable>
+
+		<GenerateDocumentationFile>true</GenerateDocumentationFile>
+		<NoWarn>$(NoWarn);1591</NoWarn>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\ApiVault.Application\ApiVault.Application.csproj" />
+		<ProjectReference Include="..\ApiVault.Infrastructure\ApiVault.Infrastructure.csproj" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" />
+		<PackageReference Include="Microsoft.EntityFrameworkCore" />
+		<PackageReference Include="Microsoft.EntityFrameworkCore.Design">
+		  <PrivateAssets>all</PrivateAssets>
+		  <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+		</PackageReference>
+		<PackageReference Include="Swashbuckle.AspNetCore" VersionOverride="10.2.3" />
+	</ItemGroup>
+
+</Project>
+
+<!--<Project Sdk="Microsoft.NET.Sdk.Web">
+	<PropertyGroup>  
+	    <UserSecretsId>7e940840-3384-49d3-89cb-ecb9ae4522ec</UserSecretsId>
+    </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\ApiVault.Application\ApiVault.Application.csproj" />
+    <ProjectReference Include="..\ApiVault.Infrastructure\ApiVault.Infrastructure.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" />
+  </ItemGroup>
+</Project>-->
