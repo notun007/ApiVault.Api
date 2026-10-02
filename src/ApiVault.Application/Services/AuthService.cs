@@ -88,6 +88,30 @@ public sealed class AuthService(IApplicationDbContext dbContext, IPasswordHasher
         return objLoginResponse;
 
     }
+
+    public async Task ChangePasswordAsync(string username, ChangePasswordRequest request, CancellationToken cancellationToken)
+    {
+        var normalized = username.Trim().ToUpperInvariant();
+        var user = await dbContext.AppUsers.SingleOrDefaultAsync(
+            x => x.Username.ToUpper() == normalized, cancellationToken)
+            ?? throw new UnauthorizedAccessException("The authenticated user could not be found.");
+
+        if (!passwordHasher.Verify(request.CurrentPassword, user.PasswordHash))
+            throw new RequestValidationException("The current password is incorrect.");
+
+        ValidateNewPassword(request.NewPassword, request.ConfirmPassword, user.PasswordHash);
+        user.PasswordHash = passwordHasher.Hash(request.NewPassword);
+        await dbContext.SaveChangesAsync(cancellationToken);
+    }
+
+    private void ValidateNewPassword(string newPassword, string confirmPassword, string currentPasswordHash)
+    {
+        if (!string.Equals(newPassword, confirmPassword, StringComparison.Ordinal))
+            throw new RequestValidationException("The new password and confirmation do not match.");
+
+        if (passwordHasher.Verify(newPassword, currentPasswordHash))
+            throw new RequestValidationException("The new password must be different from the current password.");
+    }
 }
 
 public sealed class UserAdministrationService(IApplicationDbContext dbContext, IPasswordHasher passwordHasher)
@@ -127,12 +151,15 @@ public sealed class UserAdministrationService(IApplicationDbContext dbContext, I
 
         var legacyRole = roles.Select(x => x.Code).Select(x => x switch
         {
+            "SUPER_ADMIN" => (int?)UserRole.SuperAdmin,
             "ADMIN" => (int?)UserRole.Admin,
             "API_OWNER" => (int?)UserRole.ApiOwner,
             "TESTER" => (int?)UserRole.Tester,
             "VIEWER" => (int?)UserRole.Viewer,
             _ => null
-        }).Where(x => x.HasValue).Select(x => x!.Value).OrderBy(x => x).FirstOrDefault();
+        }).Where(x => x.HasValue).Select(x => x!.Value)
+            .OrderBy(x => x == (int)UserRole.SuperAdmin ? 0 : x)
+            .FirstOrDefault();
         if (legacyRole != 0)
             user.Role = (UserRole)legacyRole;
 
@@ -178,5 +205,20 @@ public sealed class UserAdministrationService(IApplicationDbContext dbContext, I
             Role = entity.Role,
             IsActive = entity.IsActive
         };
+    }
+
+    public async Task ResetPasswordAsync(Guid userId, ResetPasswordRequest request, CancellationToken cancellationToken)
+    {
+        var user = await dbContext.AppUsers.SingleOrDefaultAsync(x => x.Id == userId, cancellationToken)
+            ?? throw new NotFoundException("User was not found.");
+
+        if (!string.Equals(request.NewPassword, request.ConfirmPassword, StringComparison.Ordinal))
+            throw new RequestValidationException("The new password and confirmation do not match.");
+
+        if (passwordHasher.Verify(request.NewPassword, user.PasswordHash))
+            throw new RequestValidationException("The new password must be different from the current password.");
+
+        user.PasswordHash = passwordHasher.Hash(request.NewPassword);
+        await dbContext.SaveChangesAsync(cancellationToken);
     }
 }

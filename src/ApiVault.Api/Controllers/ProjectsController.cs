@@ -12,9 +12,11 @@ public sealed class ProjectsController(ProjectService service) : ControllerBase
 {
 
     [HttpGet]
-    public async Task<ActionResult<IReadOnlyList<ProjectSummaryResponse>>> GetAll(CancellationToken cancellationToken)
+    public async Task<ActionResult<IReadOnlyList<ProjectSummaryResponse>>> GetAll(
+        [FromQuery] bool activeOnly = false,
+        CancellationToken cancellationToken = default)
     {
-        var objProjects = await service.GetAllAsync(cancellationToken);
+        var objProjects = await service.GetAllAsync(activeOnly, cancellationToken);
         return Ok(objProjects);
     }
 
@@ -32,6 +34,14 @@ public sealed class ProjectsController(ProjectService service) : ControllerBase
         var created = await service.CreateAsync(request, cancellationToken);
         return CreatedAtAction(nameof(Get), new { id = created.Id }, created);
     }
+
+    [Authorize(Roles = "Admin,ApiOwner")]
+    [HttpPut("{id:guid}")]
+    public async Task<ActionResult<ProjectDetailResponse>> Update(
+        Guid id,
+        CreateProjectRequest request,
+        CancellationToken cancellationToken) =>
+        Ok(await service.UpdateAsync(id, request, cancellationToken));
 
     [Authorize(Roles = "Admin,ApiOwner")]
     [HttpPost("{projectId:guid}/api-versions")]

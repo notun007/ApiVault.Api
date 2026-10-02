@@ -22,21 +22,12 @@ public sealed class DevelopmentTeam : AuditableEntity
     public ICollection<Project> Projects { get; set; } = new List<Project>();
 }
 
-public sealed class ApiProject : AuditableEntity
-{
-    public string Code { get; set; } = string.Empty;
-    public string Name { get; set; } = string.Empty;
-    public string? Description { get; set; }
-    public bool IsActive { get; set; } = true;
-    public ICollection<ApiAsset> Apis { get; set; } = new List<ApiAsset>();
-}
-
 //New
 public sealed class ApiAsset : AuditableEntity
 {
     public string Name { get; set; } = string.Empty;
-    public Guid ApiProjectId { get; set; }
-    public ApiProject ApiProject { get; set; } = null!;
+    public Guid PublishingApplicationId { get; set; }
+    public Project PublishingApplication { get; set; } = null!;
     public string? Description { get; set; }
     public ApiOwnershipType OwnershipType { get; set; }
     public ApiProtocol Protocol { get; set; }

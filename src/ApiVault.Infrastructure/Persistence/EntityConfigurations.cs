@@ -84,21 +84,6 @@ public sealed class DevelopmentTeamConfiguration
     }
 }
 
-public sealed class ApiProjectConfiguration : IEntityTypeConfiguration<ApiProject>
-{
-    public void Configure(EntityTypeBuilder<ApiProject> b)
-    {
-        b.ToTable("API_PROJECT");
-        ConfigurationHelpers.ConfigureAudit(b);
-        b.Property(x => x.Code).HasMaxLength(100).IsRequired();
-        b.Property(x => x.Name).HasMaxLength(200).IsRequired();
-        b.Property(x => x.Description).HasMaxLength(4000);
-        b.Property(x => x.IsActive).IsRequired();
-        b.HasIndex(x => x.Code).IsUnique();
-        b.HasIndex(x => x.Name).IsUnique();
-    }
-}
-
 public sealed class ApiAssetConfiguration
     : IEntityTypeConfiguration<ApiAsset>
 {
@@ -112,7 +97,7 @@ public sealed class ApiAssetConfiguration
             .HasMaxLength(200)
             .IsRequired();
 
-        b.Property(x => x.ApiProjectId).HasColumnType("uniqueidentifier").IsRequired();
+        b.Property(x => x.PublishingApplicationId).HasColumnType("uniqueidentifier").IsRequired();
 
         b.Property(x => x.Description)
             .HasMaxLength(4000);
@@ -146,12 +131,12 @@ public sealed class ApiAssetConfiguration
         b.Property(x => x.DevelopmentTeamId)
             .HasColumnType("uniqueidentifier");
 
-        b.HasIndex(x => new { x.Name, x.ApiProjectId })
+        b.HasIndex(x => new { x.Name, x.PublishingApplicationId })
             .IsUnique();
 
-        b.HasOne(x => x.ApiProject)
-            .WithMany(x => x.Apis)
-            .HasForeignKey(x => x.ApiProjectId)
+        b.HasOne(x => x.PublishingApplication)
+            .WithMany(x => x.PublishedApis)
+            .HasForeignKey(x => x.PublishingApplicationId)
             .OnDelete(DeleteBehavior.Restrict);
 
         b.HasOne(x => x.BusinessArea)
@@ -400,6 +385,14 @@ public sealed class ProjectConfiguration
         b.Property(x => x.OwnerTeamId)
             .HasColumnType("uniqueidentifier");
 
+        b.Property(x => x.OwnershipType)
+            .HasConversion<string>()
+            .HasMaxLength(30)
+            .IsRequired();
+
+        b.Property(x => x.VendorId)
+            .HasColumnType("uniqueidentifier");
+
         b.HasIndex(x => x.Code)
             .IsUnique();
 
@@ -412,6 +405,30 @@ public sealed class ProjectConfiguration
             .WithMany(x => x.Projects)
             .HasForeignKey(x => x.OwnerTeamId)
             .OnDelete(DeleteBehavior.Restrict);
+
+        b.HasOne(x => x.Vendor)
+            .WithMany(x => x.Systems)
+            .HasForeignKey(x => x.VendorId)
+            .OnDelete(DeleteBehavior.Restrict);
+    }
+}
+
+public sealed class VendorConfiguration : IEntityTypeConfiguration<Vendor>
+{
+    public void Configure(EntityTypeBuilder<Vendor> b)
+    {
+        b.ToTable("VENDOR");
+        ConfigurationHelpers.ConfigureAudit(b);
+        b.Property(x => x.Code).HasMaxLength(50).IsRequired();
+        b.Property(x => x.Name).HasMaxLength(200).IsRequired();
+        b.Property(x => x.Description).HasMaxLength(4000);
+        b.Property(x => x.ContactPerson).HasMaxLength(200);
+        b.Property(x => x.SupportEmail).HasMaxLength(320);
+        b.Property(x => x.SupportPhone).HasMaxLength(100);
+        b.Property(x => x.WebsiteUrl).HasMaxLength(1000);
+        b.Property(x => x.IsActive).HasColumnType("bit");
+        b.HasIndex(x => x.Code).IsUnique();
+        b.HasIndex(x => x.Name).IsUnique();
     }
 }
 

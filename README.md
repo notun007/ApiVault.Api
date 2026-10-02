@@ -19,7 +19,10 @@ src/
 
 - Internal and third-party API registration.
 - REST, SOAP, and generic web-service classification.
-- API creator, API project name, owner development team, vendor, and business area.
+- Unified system/application registry: a system can publish APIs, consume APIs, or do both.
+- API creator, publishing system, owner development team, vendor company, and business area.
+- Third-party vendor-company registry with support contacts and source-system linkage.
+- Self-service password change and administrator/Super Administrator password reset.
 - Multiple immutable version identities with editable release metadata.
 - Draft, Active, Deprecated, and Retired lifecycle transitions.
 - Endpoint method, relative URL, headers, query/path definitions, sample payload, sample response, SOAPAction, and success codes.
@@ -132,15 +135,14 @@ Development URLs:
 ## Core workflow
 
 1. Create business areas and development teams.
-2. Register an API asset.
-3. Add an API version/release.
-4. Add endpoints.
-5. Add Development/UAT/Production environments.
+2. Register vendor companies for externally supplied systems.
+3. Register the source system that publishes the API and identify its internal or third-party ownership.
+4. Register an API asset under that publishing system.
+5. Add an API version/release, endpoints, and Development/UAT/Production environments.
 6. Add encrypted environment secrets.
-7. Register projects.
-8. Link each project to the exact API version it consumes.
-9. Execute controlled tests and review retained history.
-10. Move versions through lifecycle states without deleting governance records.
+7. Register consumer applications and link the exact API versions they consume.
+8. Execute controlled tests and review retained history.
+9. Move versions through lifecycle states without deleting governance records.
 
 ## Endpoint header JSON
 
@@ -232,6 +234,7 @@ The service intentionally does not expose hard-delete endpoints for catalog, ver
 
 ```text
 POST   /api/auth/login
+PUT    /api/auth/password
 GET    /api/apis
 POST   /api/apis
 PUT    /api/apis/{id}
@@ -244,8 +247,14 @@ POST   /api/apis/{apiId}/versions/{versionId}/environments
 PUT    /api/apis/{apiId}/versions/{versionId}/environments/{environmentId}
 PUT    /api/apis/{apiId}/versions/{versionId}/environments/{environmentId}/secret
 GET    /api/projects
+GET    /api/projects/{id}
 POST   /api/projects
+PUT    /api/projects/{id}
 POST   /api/projects/{projectId}/api-versions
+GET    /api/vendors
+POST   /api/vendors
+PUT    /api/vendors/{id}
+PUT    /api/users/{userId}/password
 POST   /api/api-tests/execute
 GET    /api/api-tests/history
 GET    /api/audit-logs

@@ -59,6 +59,7 @@ public sealed class DatabaseSeeder(
 
         var roles = new (string Code, string Name, UserRole? LegacyRole)[]
         {
+            ("SUPER_ADMIN", "Super Administrator", UserRole.SuperAdmin),
             ("ADMIN", "Administrator", UserRole.Admin), ("API_OWNER", "API Owner", UserRole.ApiOwner),
             ("TESTER", "Tester", UserRole.Tester), ("VIEWER", "Viewer", UserRole.Viewer),
             ("SECURITY_ADMIN", "Security Administrator", null)
@@ -70,9 +71,10 @@ public sealed class DatabaseSeeder(
         var screens = new (string Code, string Name, string Route, string Icon, int Order)[]
         {
             ("DASHBOARD", "Dashboard", "/dashboard", "DB", 10), ("API_CATALOG", "API Catalog", "/admin/apis", "AP", 20),
-            ("PROJECTS", "Projects", "/admin/projects", "PR", 30), ("TEST_CONSOLE", "Test Console", "/admin/test-console", "TX", 40),
+            ("PROJECTS", "Applications & Systems", "/projects", "AS", 30), ("TEST_CONSOLE", "Test Console", "/admin/test-console", "TX", 40),
             ("TEST_HISTORY", "Test History", "/admin/test-history", "HS", 50), ("REFERENCE_DATA", "Reference Data", "/admin/reference-data", "RF", 60),
-            ("API_PROJECTS", "API Projects", "/admin/api-projects", "PJ", 70), ("USERS", "Users", "/admin/users", "US", 80),
+            ("VENDORS", "Vendor Companies", "/admin/vendors", "VN", 75), ("USERS", "Users", "/admin/users", "US", 80),
+            ("RESET_PASSWORD", "Reset Password", "/admin/reset-password", "PW", 85),
             ("AUDIT_LOGS", "Audit Logs", "/admin/audit-logs", "AU", 90), ("SECURITY_ROLES", "Roles", "/admin/security/roles", "RL", 100),
             ("SECURITY_PERMISSIONS", "Permissions", "/admin/security/permissions", "PM", 110)
         };
@@ -82,7 +84,7 @@ public sealed class DatabaseSeeder(
 
         await dbContext.SaveChangesAsync(cancellationToken);
 
-        var adminRoles = await dbContext.SecurityRoles.Where(x => x.Code == "ADMIN" || x.Code == "SECURITY_ADMIN").ToListAsync(cancellationToken);
+        var adminRoles = await dbContext.SecurityRoles.Where(x => x.Code == "SUPER_ADMIN" || x.Code == "ADMIN" || x.Code == "SECURITY_ADMIN").ToListAsync(cancellationToken);
         var allScreens = await dbContext.SecurityScreens.ToListAsync(cancellationToken);
         var allPermissions = await dbContext.SecurityPermissions.ToListAsync(cancellationToken);
         foreach (var role in adminRoles)
@@ -94,7 +96,7 @@ public sealed class DatabaseSeeder(
         var users = await dbContext.AppUsers.ToListAsync(cancellationToken);
         foreach (var user in users)
         {
-            var roleCode = user.Role switch { UserRole.Admin => "ADMIN", UserRole.ApiOwner => "API_OWNER", UserRole.Tester => "TESTER", _ => "VIEWER" };
+            var roleCode = user.Role switch { UserRole.SuperAdmin => "SUPER_ADMIN", UserRole.Admin => "ADMIN", UserRole.ApiOwner => "API_OWNER", UserRole.Tester => "TESTER", _ => "VIEWER" };
             var role = await dbContext.SecurityRoles.SingleAsync(x => x.Code == roleCode, cancellationToken);
             if (!await dbContext.AppUserRoles.AnyAsync(x => x.UserId == user.Id && x.RoleId == role.Id, cancellationToken))
                 dbContext.AppUserRoles.Add(new AppUserRole { UserId = user.Id, RoleId = role.Id });

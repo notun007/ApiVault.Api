@@ -11,7 +11,7 @@ public sealed class ApiSearchQuery
     public ApiLifecycleStatus? LifecycleStatus { get; set; }
     public Guid? BusinessAreaId { get; set; }
     public Guid? DevelopmentTeamId { get; set; }
-    public Guid? ApiProjectId { get; set; }
+    public Guid? PublishingApplicationId { get; set; }
     [Range(1, int.MaxValue)] public int Page { get; set; } = 1;
     [Range(1, 200)] public int PageSize { get; set; } = 25;
 }
@@ -19,24 +19,18 @@ public sealed class ApiSearchQuery
 public sealed class CreateApiRequest
 {
     [Required, MaxLength(200)] public string Name { get; set; } = string.Empty;
-    [Required] public Guid ApiProjectId { get; set; }
+    [Required] public Guid PublishingApplicationId { get; set; }
     [MaxLength(4000)] public string? Description { get; set; }
-    [Required] public ApiOwnershipType OwnershipType { get; set; }
     [Required] public ApiProtocol Protocol { get; set; }
-    [Required, MaxLength(200)] public string CreatorName { get; set; } = string.Empty;
-    [EmailAddress, MaxLength(320)] public string? CreatorEmail { get; set; }
-    [MaxLength(200)] public string? VendorName { get; set; }
     [Url, MaxLength(1000)] public string? ExternalReferenceUrl { get; set; }
-    [Required] public Guid BusinessAreaId { get; set; }
-    [Required] public Guid DevelopmentTeamId { get; set; }
 }
 
 public sealed class ApiSummaryResponse
 {
     public Guid Id { get; set; }
     public string Name { get; set; } = string.Empty;
-    public Guid ApiProjectId { get; set; }
-    public LookupResponse ApiProject { get; set; } = new();
+    public Guid PublishingApplicationId { get; set; }
+    public LookupResponse PublishingApplication { get; set; } = new();
     public ApiOwnershipType OwnershipType { get; set; }
     public ApiProtocol Protocol { get; set; }
     public string BusinessArea { get; set; } = string.Empty;
@@ -50,8 +44,8 @@ public sealed class ApiDetailResponse
 {
     public Guid Id { get; set; }
     public string Name { get; set; } = string.Empty;
-    public Guid ApiProjectId { get; set; }
-    public LookupResponse ApiProject { get; set; } = new();
+    public Guid PublishingApplicationId { get; set; }
+    public LookupResponse PublishingApplication { get; set; } = new();
     public string? Description { get; set; }
     public ApiOwnershipType OwnershipType { get; set; }
     public ApiProtocol Protocol { get; set; }

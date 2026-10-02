@@ -6,7 +6,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace ApiVault.Api.Controllers;
 
 [ApiController]
-[Authorize(Roles = "Admin")]
+[Authorize(Roles = "Admin,SuperAdmin")]
 [Route("api/users")]
 public sealed class UsersController(UserAdministrationService service) : ControllerBase
 {
@@ -28,4 +28,11 @@ public sealed class UsersController(UserAdministrationService service) : Control
     [HttpPost]
     public async Task<ActionResult<UserResponse>> Create(CreateUserRequest request, CancellationToken cancellationToken) =>
         Ok(await service.CreateAsync(request, cancellationToken));
+
+    [HttpPut("{userId:guid}/password")]
+    public async Task<IActionResult> ResetPassword(Guid userId, ResetPasswordRequest request, CancellationToken cancellationToken)
+    {
+        await service.ResetPasswordAsync(userId, request, cancellationToken);
+        return NoContent();
+    }
 }

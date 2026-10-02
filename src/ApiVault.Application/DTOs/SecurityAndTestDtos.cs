@@ -19,6 +19,19 @@ public sealed class LoginResponse
     public string? Message { get; set; }
 }
 
+public sealed class ChangePasswordRequest
+{
+    [Required, MaxLength(200)] public string CurrentPassword { get; set; } = string.Empty;
+    [Required, MinLength(12), MaxLength(200)] public string NewPassword { get; set; } = string.Empty;
+    [Required, MinLength(12), MaxLength(200)] public string ConfirmPassword { get; set; } = string.Empty;
+}
+
+public sealed class ResetPasswordRequest
+{
+    [Required, MinLength(12), MaxLength(200)] public string NewPassword { get; set; } = string.Empty;
+    [Required, MinLength(12), MaxLength(200)] public string ConfirmPassword { get; set; } = string.Empty;
+}
+
 public sealed class ExecuteApiTestRequest
 {
     [Required] public Guid ApiEndpointId { get; set; }

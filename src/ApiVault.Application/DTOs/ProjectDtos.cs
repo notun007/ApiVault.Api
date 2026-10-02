@@ -12,6 +12,8 @@ public sealed class CreateProjectRequest
     public ProjectStatus Status { get; set; } = ProjectStatus.Active;
     [Required] public Guid BusinessAreaId { get; set; }
     [Required] public Guid OwnerTeamId { get; set; }
+    [Required] public ApiOwnershipType OwnershipType { get; set; }
+    public Guid? VendorId { get; set; }
 }
 
 public sealed class LinkProjectApiVersionRequest
@@ -26,17 +28,33 @@ public class ProjectSummaryResponse
     public Guid Id { get; set; }
     public string Code { get; set; } = string.Empty;
     public string Name { get; set; } = string.Empty;
+    public string? Description { get; set; }
     public ProjectCriticality Criticality { get; set; }
     public ProjectStatus Status { get; set; }
     public string BusinessArea { get; set; } = string.Empty;
     public string OwnerTeam { get; set; } = string.Empty;
+    public Guid? BusinessAreaId { get; set; }
+    public Guid? OwnerTeamId { get; set; }
+    public ApiOwnershipType OwnershipType { get; set; }
+    public Guid? VendorId { get; set; }
+    public string? VendorName { get; set; }
     public int LinkedApiVersionCount { get; set; }
+    public int PublishedApiCount { get; set; }
+    public bool PublishesApis => PublishedApiCount > 0;
+    public bool ConsumesApis => LinkedApiVersionCount > 0;
 }
 
 public sealed class ProjectDetailResponse : ProjectSummaryResponse
 {
-    public string? Description { get; set; }
     public IReadOnlyList<ProjectApiLinkResponse> ApiVersions { get; set; } = Array.Empty<ProjectApiLinkResponse>();
+    public IReadOnlyList<ApplicationPublishedApiResponse> PublishedApis { get; set; } = Array.Empty<ApplicationPublishedApiResponse>();
+}
+
+public sealed class ApplicationPublishedApiResponse
+{
+    public Guid ApiId { get; set; }
+    public string ApiName { get; set; } = string.Empty;
+    public int VersionCount { get; set; }
 }
 
 public sealed class ProjectApiLinkResponse

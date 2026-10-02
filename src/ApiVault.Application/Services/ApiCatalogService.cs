@@ -23,20 +23,20 @@ public sealed class ApiCatalogService(IApplicationDbContext dbContext, ISecretPr
         {
             var search = query.Search.Trim().ToUpperInvariant();
             source = source.Where(x => x.Name.ToUpper().Contains(search) ||
-                                       x.ApiProject.Name.ToUpper().Contains(search) ||
+                                       x.PublishingApplication.Name.ToUpper().Contains(search) ||
                                        (x.Description != null && x.Description.ToUpper().Contains(search)));
         }
 
         if (query.OwnershipType.HasValue)
-            source = source.Where(x => x.OwnershipType == query.OwnershipType.Value);
+            source = source.Where(x => x.PublishingApplication.OwnershipType == query.OwnershipType.Value);
         if (query.Protocol.HasValue)
             source = source.Where(x => x.Protocol == query.Protocol.Value);
         if (query.BusinessAreaId.HasValue)
             source = source.Where(x => x.BusinessAreaId == query.BusinessAreaId.Value);
         if (query.DevelopmentTeamId.HasValue)
             source = source.Where(x => x.DevelopmentTeamId == query.DevelopmentTeamId.Value);
-        if (query.ApiProjectId.HasValue)
-            source = source.Where(x => x.ApiProjectId == query.ApiProjectId.Value);
+        if (query.PublishingApplicationId.HasValue)
+            source = source.Where(x => x.PublishingApplicationId == query.PublishingApplicationId.Value);
         if (query.LifecycleStatus.HasValue)
             source = source.Where(x => x.Versions.Any(v => v.LifecycleStatus == query.LifecycleStatus.Value));
 
@@ -49,9 +49,9 @@ public sealed class ApiCatalogService(IApplicationDbContext dbContext, ISecretPr
             {
                 Id = x.Id,
                 Name = x.Name,
-                ApiProjectId = x.ApiProjectId,
-                ApiProject = new LookupResponse { Id = x.ApiProject.Id, Code = x.ApiProject.Code, Name = x.ApiProject.Name },
-                OwnershipType = x.OwnershipType,
+                PublishingApplicationId = x.PublishingApplicationId,
+                PublishingApplication = new LookupResponse { Id = x.PublishingApplication.Id, Code = x.PublishingApplication.Code, Name = x.PublishingApplication.Name },
+                OwnershipType = x.PublishingApplication.OwnershipType,
                 Protocol = x.Protocol,
                 BusinessArea = x.BusinessArea.Name,
                 DevelopmentTeam = x.DevelopmentTeam.Name,
@@ -77,7 +77,8 @@ public sealed class ApiCatalogService(IApplicationDbContext dbContext, ISecretPr
             .AsNoTracking()
             .Include(x => x.BusinessArea)
             .Include(x => x.DevelopmentTeam)
-            .Include(x => x.ApiProject)
+            .Include(x => x.PublishingApplication)
+                .ThenInclude(x => x.Vendor)
             .Include(x => x.Versions)
                 .ThenInclude(x => x.Endpoints)
             .Include(x => x.Versions)
@@ -89,30 +90,35 @@ public sealed class ApiCatalogService(IApplicationDbContext dbContext, ISecretPr
         return MapApiDetail(entity);
     }
 
-    public async Task<ApiDetailResponse> CreateAsync(CreateApiRequest request, CancellationToken cancellationToken)
+    public async Task<ApiDetailResponse> CreateAsync(
+        CreateApiRequest request,
+        string username,
+        CancellationToken cancellationToken)
     {
-        await EnsureLookupValuesExistAsync(request.BusinessAreaId, request.DevelopmentTeamId, cancellationToken);
-        await EnsureApiProjectExistsAsync(request.ApiProjectId, cancellationToken);
+        var publishingApplication = await GetPublishingApplicationAsync(request.PublishingApplicationId, cancellationToken);
+        var creator = await dbContext.AppUsers.AsNoTracking()
+            .SingleOrDefaultAsync(x => x.Username.ToUpper() == username.Trim().ToUpper(), cancellationToken)
+            ?? throw new RequestValidationException("The authenticated user could not be found.");
 
         var duplicate = await dbContext.ApiAssets.AnyAsync(
             x => x.Name.ToUpper() == request.Name.Trim().ToUpper() &&
-                 x.ApiProjectId == request.ApiProjectId, cancellationToken);
+                 x.PublishingApplicationId == request.PublishingApplicationId, cancellationToken);
         if (duplicate)
-            throw new ConflictException("An API with the same name and API project name already exists.");
+            throw new ConflictException("An API with the same name and publishing system already exists.");
 
         var entity = new ApiAsset
         {
             Name = request.Name.Trim(),
-            ApiProjectId = request.ApiProjectId,
+            PublishingApplicationId = request.PublishingApplicationId,
             Description = request.Description?.Trim(),
-            OwnershipType = request.OwnershipType,
+            OwnershipType = publishingApplication.OwnershipType,
             Protocol = request.Protocol,
-            CreatorName = request.CreatorName.Trim(),
-            CreatorEmail = request.CreatorEmail?.Trim(),
-            VendorName = request.VendorName?.Trim(),
+            CreatorName = creator.DisplayName,
+            CreatorEmail = creator.Email,
+            VendorName = publishingApplication.Vendor?.Name,
             ExternalReferenceUrl = request.ExternalReferenceUrl?.Trim(),
-            BusinessAreaId = request.BusinessAreaId,
-            DevelopmentTeamId = request.DevelopmentTeamId
+            BusinessAreaId = publishingApplication.BusinessAreaId!.Value,
+            DevelopmentTeamId = publishingApplication.OwnerTeamId!.Value
         };
 
         dbContext.ApiAssets.Add(entity);
@@ -122,28 +128,25 @@ public sealed class ApiCatalogService(IApplicationDbContext dbContext, ISecretPr
 
     public async Task<ApiDetailResponse> UpdateAsync(Guid id, CreateApiRequest request, CancellationToken cancellationToken)
     {
-        await EnsureLookupValuesExistAsync(request.BusinessAreaId, request.DevelopmentTeamId, cancellationToken);
-        await EnsureApiProjectExistsAsync(request.ApiProjectId, cancellationToken);
+        var publishingApplication = await GetPublishingApplicationAsync(request.PublishingApplicationId, cancellationToken);
         var entity = await dbContext.ApiAssets.SingleOrDefaultAsync(x => x.Id == id, cancellationToken)
             ?? throw new NotFoundException("API registration was not found.");
 
         var duplicate = await dbContext.ApiAssets.AnyAsync(
             x => x.Id != id && x.Name.ToUpper() == request.Name.Trim().ToUpper() &&
-                 x.ApiProjectId == request.ApiProjectId, cancellationToken);
+                 x.PublishingApplicationId == request.PublishingApplicationId, cancellationToken);
         if (duplicate)
-            throw new ConflictException("An API with the same name and API project name already exists.");
+            throw new ConflictException("An API with the same name and publishing system already exists.");
 
         entity.Name = request.Name.Trim();
-        entity.ApiProjectId = request.ApiProjectId;
+        entity.PublishingApplicationId = request.PublishingApplicationId;
         entity.Description = request.Description?.Trim();
-        entity.OwnershipType = request.OwnershipType;
+        entity.OwnershipType = publishingApplication.OwnershipType;
         entity.Protocol = request.Protocol;
-        entity.CreatorName = request.CreatorName.Trim();
-        entity.CreatorEmail = request.CreatorEmail?.Trim();
-        entity.VendorName = request.VendorName?.Trim();
+        entity.VendorName = publishingApplication.Vendor?.Name;
         entity.ExternalReferenceUrl = request.ExternalReferenceUrl?.Trim();
-        entity.BusinessAreaId = request.BusinessAreaId;
-        entity.DevelopmentTeamId = request.DevelopmentTeamId;
+        entity.BusinessAreaId = publishingApplication.BusinessAreaId!.Value;
+        entity.DevelopmentTeamId = publishingApplication.OwnerTeamId!.Value;
         await dbContext.SaveChangesAsync(cancellationToken);
         return await GetAsync(id, cancellationToken);
     }
@@ -482,24 +485,28 @@ public sealed class ApiCatalogService(IApplicationDbContext dbContext, ISecretPr
             entity.RetiredAtUtc ??= now;
     }
 
-    private async Task EnsureApiProjectExistsAsync(Guid apiProjectId, CancellationToken cancellationToken)
+    private async Task<Project> GetPublishingApplicationAsync(Guid applicationId, CancellationToken cancellationToken)
     {
-        if (!await dbContext.ApiProjects.AnyAsync(x => x.Id == apiProjectId && x.IsActive, cancellationToken))
-            throw new RequestValidationException("API project does not exist or is inactive.");
+        var application = await dbContext.Projects.AsNoTracking().Include(x => x.Vendor)
+            .SingleOrDefaultAsync(x => x.Id == applicationId && x.Status == ProjectStatus.Active, cancellationToken)
+            ?? throw new RequestValidationException("Publishing application does not exist or is inactive.");
+        if (!application.BusinessAreaId.HasValue || !application.OwnerTeamId.HasValue)
+            throw new RequestValidationException("Complete the publishing application's business area and owner team before registering an API.");
+        return application;
     }
 
     private static ApiDetailResponse MapApiDetail(ApiAsset entity) => new()
     {
         Id = entity.Id,
         Name = entity.Name,
-        ApiProjectId = entity.ApiProjectId,
-        ApiProject = new LookupResponse { Id = entity.ApiProject.Id, Code = entity.ApiProject.Code, Name = entity.ApiProject.Name },
+        PublishingApplicationId = entity.PublishingApplicationId,
+        PublishingApplication = new LookupResponse { Id = entity.PublishingApplication.Id, Code = entity.PublishingApplication.Code, Name = entity.PublishingApplication.Name },
         Description = entity.Description,
-        OwnershipType = entity.OwnershipType,
+        OwnershipType = entity.PublishingApplication.OwnershipType,
         Protocol = entity.Protocol,
         CreatorName = entity.CreatorName,
         CreatorEmail = entity.CreatorEmail,
-        VendorName = entity.VendorName,
+        VendorName = entity.PublishingApplication.Vendor?.Name,
         ExternalReferenceUrl = entity.ExternalReferenceUrl,
         BusinessArea = new LookupResponse { Id = entity.BusinessArea.Id, Code = entity.BusinessArea.Code, Name = entity.BusinessArea.Name },
         DevelopmentTeam = new LookupResponse { Id = entity.DevelopmentTeam.Id, Code = entity.DevelopmentTeam.Code, Name = entity.DevelopmentTeam.Name },

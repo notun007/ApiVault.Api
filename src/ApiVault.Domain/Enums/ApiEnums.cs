@@ -61,5 +61,6 @@ public enum UserRole
     Admin = 1,
     ApiOwner = 2,
     Tester = 3,
-    Viewer = 4
+    Viewer = 4,
+    SuperAdmin = 5
 }

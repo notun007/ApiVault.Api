@@ -12,7 +12,6 @@ public sealed class ApiVaultDbContext(
 {
     public DbSet<BusinessArea> BusinessAreas => Set<BusinessArea>();
     public DbSet<DevelopmentTeam> DevelopmentTeams => Set<DevelopmentTeam>();
-    public DbSet<ApiProject> ApiProjects => Set<ApiProject>();
 
     public DbSet<ApiAsset> ApiAssets => Set<ApiAsset>();
     public DbSet<ApiVersion> ApiVersions => Set<ApiVersion>();
@@ -21,6 +20,7 @@ public sealed class ApiVaultDbContext(
     public DbSet<EnvironmentSecret> EnvironmentSecrets => Set<EnvironmentSecret>();
     public DbSet<Project> Projects => Set<Project>();
     public DbSet<ProjectApiVersion> ProjectApiVersions => Set<ProjectApiVersion>();
+    public DbSet<Vendor> Vendors => Set<Vendor>();
     public DbSet<AppUser> AppUsers => Set<AppUser>();
     public DbSet<SecurityRole> SecurityRoles => Set<SecurityRole>();
     public DbSet<SecurityPermission> SecurityPermissions => Set<SecurityPermission>();

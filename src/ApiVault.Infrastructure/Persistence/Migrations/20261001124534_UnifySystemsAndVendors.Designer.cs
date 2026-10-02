@@ -4,6 +4,7 @@ using ApiVault.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace ApiVault.Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(ApiVaultDbContext))]
-    partial class ApiVaultDbContextModelSnapshot : ModelSnapshot
+    [Migration("20261001124534_UnifySystemsAndVendors")]
+    partial class UnifySystemsAndVendors
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -26,6 +29,9 @@ namespace ApiVault.Infrastructure.Persistence.Migrations
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("ApiProjectId")
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<Guid>("BusinessAreaId")
@@ -74,9 +80,6 @@ namespace ApiVault.Infrastructure.Persistence.Migrations
                         .HasMaxLength(30)
                         .HasColumnType("nvarchar(30)");
 
-                    b.Property<Guid>("PublishingApplicationId")
-                        .HasColumnType("uniqueidentifier");
-
                     b.Property<DateTime?>("UpdatedAtUtc")
                         .HasColumnType("datetime2(6)");
 
@@ -90,13 +93,13 @@ namespace ApiVault.Infrastructure.Persistence.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("ApiProjectId");
+
                     b.HasIndex("BusinessAreaId");
 
                     b.HasIndex("DevelopmentTeamId");
 
-                    b.HasIndex("PublishingApplicationId");
-
-                    b.HasIndex("Name", "PublishingApplicationId")
+                    b.HasIndex("Name", "ApiProjectId")
                         .IsUnique();
 
                     b.ToTable("API_ASSET", (string)null);
@@ -598,6 +601,9 @@ namespace ApiVault.Infrastructure.Persistence.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
 
+                    b.Property<bool>("ConsumesApis")
+                        .HasColumnType("bit");
+
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("datetime2(6)");
 
@@ -615,6 +621,9 @@ namespace ApiVault.Infrastructure.Persistence.Migrations
                         .HasMaxLength(4000)
                         .HasColumnType("nvarchar(4000)");
 
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(200)
@@ -627,6 +636,9 @@ namespace ApiVault.Infrastructure.Persistence.Migrations
                         .IsRequired()
                         .HasMaxLength(30)
                         .HasColumnType("nvarchar(30)");
+
+                    b.Property<bool>("PublishesApis")
+                        .HasColumnType("bit");
 
                     b.Property<string>("Status")
                         .IsRequired()
@@ -1040,6 +1052,12 @@ namespace ApiVault.Infrastructure.Persistence.Migrations
 
             modelBuilder.Entity("ApiVault.Domain.Entities.ApiAsset", b =>
                 {
+                    b.HasOne("ApiVault.Domain.Entities.Project", "ApiProject")
+                        .WithMany("PublishedApis")
+                        .HasForeignKey("ApiProjectId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.HasOne("ApiVault.Domain.Entities.BusinessArea", "BusinessArea")
                         .WithMany("Apis")
                         .HasForeignKey("BusinessAreaId")
@@ -1052,17 +1070,11 @@ namespace ApiVault.Infrastructure.Persistence.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.HasOne("ApiVault.Domain.Entities.Project", "PublishingApplication")
-                        .WithMany("PublishedApis")
-                        .HasForeignKey("PublishingApplicationId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
+                    b.Navigation("ApiProject");
 
                     b.Navigation("BusinessArea");
 
                     b.Navigation("DevelopmentTeam");
-
-                    b.Navigation("PublishingApplication");
                 });
 
             modelBuilder.Entity("ApiVault.Domain.Entities.ApiEndpoint", b =>

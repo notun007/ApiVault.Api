@@ -10,11 +10,28 @@ public sealed class Project : AuditableEntity
     public string? Description { get; set; }
     public ProjectCriticality Criticality { get; set; } = ProjectCriticality.Medium;
     public ProjectStatus Status { get; set; } = ProjectStatus.Active;
-    public Guid BusinessAreaId { get; set; }
-    public BusinessArea BusinessArea { get; set; } = null!;
-    public Guid OwnerTeamId { get; set; }
-    public DevelopmentTeam OwnerTeam { get; set; } = null!;
+    public Guid? BusinessAreaId { get; set; }
+    public BusinessArea? BusinessArea { get; set; }
+    public Guid? OwnerTeamId { get; set; }
+    public DevelopmentTeam? OwnerTeam { get; set; }
+    public ApiOwnershipType OwnershipType { get; set; } = ApiOwnershipType.Internal;
+    public Guid? VendorId { get; set; }
+    public Vendor? Vendor { get; set; }
+    public ICollection<ApiAsset> PublishedApis { get; set; } = new List<ApiAsset>();
     public ICollection<ProjectApiVersion> ApiLinks { get; set; } = new List<ProjectApiVersion>();
+}
+
+public sealed class Vendor : AuditableEntity
+{
+    public string Code { get; set; } = string.Empty;
+    public string Name { get; set; } = string.Empty;
+    public string? Description { get; set; }
+    public string? ContactPerson { get; set; }
+    public string? SupportEmail { get; set; }
+    public string? SupportPhone { get; set; }
+    public string? WebsiteUrl { get; set; }
+    public bool IsActive { get; set; } = true;
+    public ICollection<Project> Systems { get; set; } = new List<Project>();
 }
 
 public sealed class ProjectApiVersion : AuditableEntity

@@ -25,7 +25,7 @@ public sealed class ApisController(ApiCatalogService service) : ControllerBase
     [HttpPost]
     public async Task<ActionResult<ApiDetailResponse>> Create(CreateApiRequest request, CancellationToken cancellationToken)
     {
-        var created = await service.CreateAsync(request, cancellationToken);
+        var created = await service.CreateAsync(request, User.Identity!.Name!, cancellationToken);
         return CreatedAtAction(nameof(Get), new { id = created.Id }, created);
     }
 

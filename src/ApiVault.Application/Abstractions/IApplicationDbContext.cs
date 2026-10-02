@@ -7,7 +7,6 @@ public interface IApplicationDbContext
 {
     DbSet<BusinessArea> BusinessAreas { get; }
     DbSet<DevelopmentTeam> DevelopmentTeams { get; }
-    DbSet<ApiProject> ApiProjects { get; }
     DbSet<ApiAsset> ApiAssets { get; }
     DbSet<ApiVersion> ApiVersions { get; }
     DbSet<ApiEndpoint> ApiEndpoints { get; }
@@ -15,6 +14,7 @@ public interface IApplicationDbContext
     DbSet<EnvironmentSecret> EnvironmentSecrets { get; }
     DbSet<Project> Projects { get; }
     DbSet<ProjectApiVersion> ProjectApiVersions { get; }
+    DbSet<Vendor> Vendors { get; }
     DbSet<AppUser> AppUsers { get; }
     DbSet<SecurityRole> SecurityRoles { get; }
     DbSet<SecurityPermission> SecurityPermissions { get; }
