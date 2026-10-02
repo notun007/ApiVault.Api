@@ -41,8 +41,23 @@ public sealed class ApiCatalogService(IApplicationDbContext dbContext, ISecretPr
             source = source.Where(x => x.Versions.Any(v => v.LifecycleStatus == query.LifecycleStatus.Value));
 
         var totalCount = await source.CountAsync(cancellationToken);
+        source = (query.SortBy, query.SortDescending) switch
+        {
+            (ApiCatalogSortField.Ownership, false) => source.OrderBy(x => x.PublishingApplication.OwnershipType).ThenBy(x => x.Name).ThenBy(x => x.Id),
+            (ApiCatalogSortField.Ownership, true) => source.OrderByDescending(x => x.PublishingApplication.OwnershipType).ThenBy(x => x.Name).ThenBy(x => x.Id),
+            (ApiCatalogSortField.Protocol, false) => source.OrderBy(x => x.Protocol).ThenBy(x => x.Name).ThenBy(x => x.Id),
+            (ApiCatalogSortField.Protocol, true) => source.OrderByDescending(x => x.Protocol).ThenBy(x => x.Name).ThenBy(x => x.Id),
+            (ApiCatalogSortField.Business, false) => source.OrderBy(x => x.BusinessArea.Name).ThenBy(x => x.Name).ThenBy(x => x.Id),
+            (ApiCatalogSortField.Business, true) => source.OrderByDescending(x => x.BusinessArea.Name).ThenBy(x => x.Name).ThenBy(x => x.Id),
+            (ApiCatalogSortField.CurrentRelease, false) => source.OrderBy(x => x.Versions.Where(v => v.IsCurrent).Select(v => v.Version).FirstOrDefault()).ThenBy(x => x.Name).ThenBy(x => x.Id),
+            (ApiCatalogSortField.CurrentRelease, true) => source.OrderByDescending(x => x.Versions.Where(v => v.IsCurrent).Select(v => v.Version).FirstOrDefault()).ThenBy(x => x.Name).ThenBy(x => x.Id),
+            (ApiCatalogSortField.Versions, false) => source.OrderBy(x => x.Versions.Count).ThenBy(x => x.Name).ThenBy(x => x.Id),
+            (ApiCatalogSortField.Versions, true) => source.OrderByDescending(x => x.Versions.Count).ThenBy(x => x.Name).ThenBy(x => x.Id),
+            (ApiCatalogSortField.Name, true) => source.OrderByDescending(x => x.Name).ThenBy(x => x.Id),
+            _ => source.OrderBy(x => x.Name).ThenBy(x => x.Id)
+        };
+
         var items = await source
-            .OrderBy(x => x.Name)
             .Skip((query.Page - 1) * query.PageSize)
             .Take(query.PageSize)
             .Select(x => new ApiSummaryResponse

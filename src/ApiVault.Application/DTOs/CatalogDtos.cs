@@ -3,6 +3,16 @@ using ApiVault.Domain.Enums;
 
 namespace ApiVault.Application.DTOs;
 
+public enum ApiCatalogSortField
+{
+    Name,
+    Ownership,
+    Protocol,
+    Business,
+    CurrentRelease,
+    Versions
+}
+
 public sealed class ApiSearchQuery
 {
     public string? Search { get; set; }
@@ -12,6 +22,8 @@ public sealed class ApiSearchQuery
     public Guid? BusinessAreaId { get; set; }
     public Guid? DevelopmentTeamId { get; set; }
     public Guid? PublishingApplicationId { get; set; }
+    public ApiCatalogSortField SortBy { get; set; } = ApiCatalogSortField.Name;
+    public bool SortDescending { get; set; }
     [Range(1, int.MaxValue)] public int Page { get; set; } = 1;
     [Range(1, 200)] public int PageSize { get; set; } = 25;
 }
