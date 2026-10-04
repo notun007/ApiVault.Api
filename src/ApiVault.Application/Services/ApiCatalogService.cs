@@ -99,6 +99,9 @@ public sealed class ApiCatalogService(IApplicationDbContext dbContext, ISecretPr
             .Include(x => x.Versions)
                 .ThenInclude(x => x.Environments)
                     .ThenInclude(x => x.Secrets)
+            .Include(x => x.Versions)
+                .ThenInclude(x => x.ProjectLinks)
+                    .ThenInclude(x => x.Project)
             .SingleOrDefaultAsync(x => x.Id == id, cancellationToken)
             ?? throw new NotFoundException("API registration was not found.");
 
@@ -545,6 +548,15 @@ public sealed class ApiCatalogService(IApplicationDbContext dbContext, ISecretPr
         MaxResponseBytes = entity.MaxResponseBytes,
         TimeoutSeconds = entity.TimeoutSeconds,
         IsCurrent = entity.IsCurrent,
+        Consumers = entity.ProjectLinks.OrderBy(x => x.Project.Name).Select(x => new ApiVersionConsumerResponse
+        {
+            LinkId = x.Id,
+            ProjectId = x.ProjectId,
+            ProjectCode = x.Project.Code,
+            ProjectName = x.Project.Name,
+            Purpose = x.Purpose,
+            IsRequired = x.IsRequired
+        }).ToList(),
         Endpoints = entity.Endpoints.OrderBy(x => x.RelativePath).ThenBy(x => x.HttpMethod).Select(MapEndpoint).ToList(),
         Environments = entity.Environments.OrderBy(x => x.EnvironmentType).Select(MapEnvironment).ToList()
     };

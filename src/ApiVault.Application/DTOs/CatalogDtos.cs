@@ -124,8 +124,19 @@ public sealed class ApiVersionResponse
     public int MaxResponseBytes { get; set; }
     public int TimeoutSeconds { get; set; }
     public bool IsCurrent { get; set; }
+    public IReadOnlyList<ApiVersionConsumerResponse> Consumers { get; set; } = Array.Empty<ApiVersionConsumerResponse>();
     public IReadOnlyList<EndpointResponse> Endpoints { get; set; } = Array.Empty<EndpointResponse>();
     public IReadOnlyList<EnvironmentResponse> Environments { get; set; } = Array.Empty<EnvironmentResponse>();
+}
+
+public sealed class ApiVersionConsumerResponse
+{
+    public Guid LinkId { get; set; }
+    public Guid ProjectId { get; set; }
+    public string ProjectCode { get; set; } = string.Empty;
+    public string ProjectName { get; set; } = string.Empty;
+    public string? Purpose { get; set; }
+    public bool IsRequired { get; set; }
 }
 
 public sealed class CreateEndpointRequest
