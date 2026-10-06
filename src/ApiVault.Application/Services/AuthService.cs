@@ -59,7 +59,7 @@ public sealed class AuthService(IApplicationDbContext dbContext, IPasswordHasher
             //if (user is null || !user.IsActive || !passwordHasher.Verify(request.Password, user.PasswordHash))
             //  throw new UnauthorizedAccessException("Invalid username or password.");
 
-            if (user != null && result)
+            if (user != null && user.IsActive && result)
             {
                 user.LastLoginAtUtc = DateTime.UtcNow;
                 var token = tokenService.CreateToken(user);

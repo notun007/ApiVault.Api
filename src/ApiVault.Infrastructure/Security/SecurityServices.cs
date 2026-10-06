@@ -4,6 +4,7 @@ using System.Security.Cryptography;
 using System.Text;
 using ApiVault.Application.Abstractions;
 using ApiVault.Domain.Entities;
+using ApiVault.Domain.Enums;
 using ApiVault.Infrastructure.Options;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Http;
@@ -62,7 +63,7 @@ public sealed class JwtTokenService(IOptions<JwtOptions> options) : ITokenServic
 
         var now = DateTime.UtcNow;
         var expires = now.AddMinutes(settings.ExpirationMinutes);
-        var claims = new[]
+        var claims = new List<Claim>
         {
             new Claim(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
             new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
@@ -71,6 +72,9 @@ public sealed class JwtTokenService(IOptions<JwtOptions> options) : ITokenServic
             new Claim("display_name", user.DisplayName),
             new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
         };
+        // Super administrators inherit the existing Admin-only API endpoints.
+        if (user.Role == UserRole.SuperAdmin)
+            claims.Add(new Claim(ClaimTypes.Role, UserRole.Admin.ToString()));
 
         var credentials = new SigningCredentials(
             new SymmetricSecurityKey(Encoding.UTF8.GetBytes(settings.SigningKey)),

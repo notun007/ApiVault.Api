@@ -18,14 +18,14 @@ public sealed class ReferenceDataController(ReferenceDataService service) : Cont
     public async Task<ActionResult<IReadOnlyList<LookupResponse>>> GetDevelopmentTeams(CancellationToken cancellationToken) =>
         Ok(await service.GetDevelopmentTeamsAsync(cancellationToken));
 
-    [Authorize(Roles = "Admin")]
+    [Authorize(Roles = "Admin,SuperAdmin")]
     [HttpPost("business-areas")]
     public async Task<ActionResult<LookupResponse>> CreateBusinessArea(
         CreateLookupRequest request,
         CancellationToken cancellationToken) =>
         Ok(await service.CreateBusinessAreaAsync(request, cancellationToken));
 
-    [Authorize(Roles = "Admin")]
+    [Authorize(Roles = "Admin,SuperAdmin")]
     [HttpPost("development-teams")]
     public async Task<ActionResult<LookupResponse>> CreateDevelopmentTeam(
         CreateLookupRequest request,

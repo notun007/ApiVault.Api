@@ -6,7 +6,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace ApiVault.Api.Controllers;
 
 [ApiController]
-[Authorize(Roles = "Admin")]
+[Authorize(Roles = "Admin,SuperAdmin")]
 [Route("api/audit-logs")]
 public sealed class AuditLogsController(AuditLogService service) : ControllerBase
 {

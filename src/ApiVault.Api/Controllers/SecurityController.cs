@@ -5,7 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace ApiVault.Api.Controllers;
 
-[ApiController, Authorize(Roles = "Admin")]
+[ApiController, Authorize(Roles = "Admin,SuperAdmin")]
 [Route("api/security")]
 public sealed class SecurityController(SecurityService service) : ControllerBase
 {

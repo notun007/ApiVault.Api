@@ -31,7 +31,7 @@ public sealed class DatabaseSeeder(
 
     private async Task SeedReferenceDataAsync(CancellationToken cancellationToken)
     {
-        if (!await dbContext.BusinessAreas.AnyAsync(cancellationToken))
+        if (options.Value.SeedBusinessReferenceData && !await dbContext.BusinessAreas.AnyAsync(cancellationToken))
         {
             dbContext.BusinessAreas.AddRange(
                 new BusinessArea { Code = "CORE", Name = "Core Banking" },
@@ -39,7 +39,7 @@ public sealed class DatabaseSeeder(
                 new BusinessArea { Code = "HR", Name = "Human Resources" });
         }
 
-        if (!await dbContext.DevelopmentTeams.AnyAsync(cancellationToken))
+        if (options.Value.SeedBusinessReferenceData && !await dbContext.DevelopmentTeams.AnyAsync(cancellationToken))
             dbContext.DevelopmentTeams.Add(new DevelopmentTeam { Code = "PLATFORM", Name = "Platform Engineering" });
 
         await dbContext.SaveChangesAsync(cancellationToken);
@@ -66,7 +66,7 @@ public sealed class DatabaseSeeder(
         };
         foreach (var (code, name, _) in roles)
             if (!await dbContext.SecurityRoles.AnyAsync(x => x.Code == code, cancellationToken))
-                dbContext.SecurityRoles.Add(new SecurityRole { Code = code, Name = name, IsSystemRole = true });
+                dbContext.SecurityRoles.Add(new SecurityRole { Code = code, Name = name, IsSystemRole = true, IsActive = code != "SECURITY_ADMIN" });
 
         var screens = new (string Code, string Name, string Route, string Icon, int Order)[]
         {
@@ -84,13 +84,14 @@ public sealed class DatabaseSeeder(
 
         await dbContext.SaveChangesAsync(cancellationToken);
 
-        var adminRoles = await dbContext.SecurityRoles.Where(x => x.Code == "SUPER_ADMIN" || x.Code == "ADMIN" || x.Code == "SECURITY_ADMIN").ToListAsync(cancellationToken);
+        var seededRoles = await dbContext.SecurityRoles.Where(x => x.IsSystemRole).ToListAsync(cancellationToken);
         var allScreens = await dbContext.SecurityScreens.ToListAsync(cancellationToken);
         var allPermissions = await dbContext.SecurityPermissions.ToListAsync(cancellationToken);
-        foreach (var role in adminRoles)
+        foreach (var role in seededRoles)
             foreach (var screen in allScreens)
                 foreach (var permission in allPermissions)
-                    if (!await dbContext.RolePermissions.AnyAsync(x => x.RoleId == role.Id && x.ScreenId == screen.Id && x.PermissionId == permission.Id, cancellationToken))
+                    if (ShouldGrant(role.Code, screen.Code, permission.Code) &&
+                        !await dbContext.RolePermissions.AnyAsync(x => x.RoleId == role.Id && x.ScreenId == screen.Id && x.PermissionId == permission.Id, cancellationToken))
                         dbContext.RolePermissions.Add(new RolePermission { RoleId = role.Id, ScreenId = screen.Id, PermissionId = permission.Id });
 
         var users = await dbContext.AppUsers.ToListAsync(cancellationToken);
@@ -104,6 +105,17 @@ public sealed class DatabaseSeeder(
         await dbContext.SaveChangesAsync(cancellationToken);
     }
 
+    private static bool ShouldGrant(string role, string screen, string permission) => role switch
+    {
+        "SUPER_ADMIN" or "ADMIN" => true,
+        "API_OWNER" => screen is "DASHBOARD" or "API_CATALOG" or "PROJECTS" or "TEST_CONSOLE" or "TEST_HISTORY"
+            && permission is "VIEW" or "CREATE" or "UPDATE" or "EXECUTE",
+        "TESTER" => screen is "DASHBOARD" or "API_CATALOG" or "TEST_CONSOLE" or "TEST_HISTORY"
+            && permission is "VIEW" or "EXECUTE",
+        "VIEWER" => screen is "DASHBOARD" or "API_CATALOG" or "PROJECTS" && permission == "VIEW",
+        _ => false
+    };
+
     private async Task SeedAdminAsync(DatabaseInitializationOptions settings, CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(settings.AdminPassword))
@@ -115,15 +127,18 @@ public sealed class DatabaseSeeder(
         var username = settings.AdminUsername.Trim().ToLowerInvariant();
         if (await dbContext.AppUsers.AnyAsync(x => x.Username == username, cancellationToken)) return;
 
-        dbContext.AppUsers.Add(new AppUser
+        var admin = new AppUser
         {
             Username = username,
             DisplayName = settings.AdminDisplayName,
             Email = settings.AdminEmail,
             PasswordHash = passwordHasher.Hash(settings.AdminPassword),
-            Role = UserRole.Admin,
+            Role = UserRole.SuperAdmin,
             IsActive = true
-        });
+        };
+        var role = await dbContext.SecurityRoles.SingleAsync(x => x.Code == "SUPER_ADMIN", cancellationToken);
+        admin.RoleAssignments.Add(new AppUserRole { RoleId = role.Id });
+        dbContext.AppUsers.Add(admin);
         await dbContext.SaveChangesAsync(cancellationToken);
     }
 }

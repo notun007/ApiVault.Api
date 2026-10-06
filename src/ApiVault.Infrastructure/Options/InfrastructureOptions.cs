@@ -27,6 +27,7 @@ public sealed class DatabaseInitializationOptions
     public bool Enabled { get; set; }
     public bool ApplyMigrations { get; set; }
     public bool SeedReferenceData { get; set; } = true;
+    public bool SeedBusinessReferenceData { get; set; }
     public bool SeedAdmin { get; set; }
     public string AdminUsername { get; set; } = "admin";
     public string AdminDisplayName { get; set; } = "ApiVault Administrator";
