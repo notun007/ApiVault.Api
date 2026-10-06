@@ -11,6 +11,22 @@ using Microsoft.IdentityModel.Tokens;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Match TaskFlow.Api hosting behavior: console/debug logging avoids IIS or
+// local Windows Event Log permission failures affecting API requests.
+builder.Logging.ClearProviders();
+builder.Logging.AddConsole();
+builder.Logging.AddDebug();
+
+var jwt = builder.Configuration
+    .GetSection(JwtOptions.SectionName)
+    .Get<JwtOptions>()
+    ?? new JwtOptions();
+
+var allowedOrigins = builder.Configuration
+    .GetSection("Cors:Origins")
+    .Get<string[]>()
+    ?? ["http://localhost:4200"];
+
 // Kestrel configuration
 builder.WebHost.ConfigureKestrel(options =>
 {
@@ -38,12 +54,6 @@ builder.Services.AddInfrastructure(builder.Configuration);
 // Swagger
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
-
-// JWT configuration
-var jwt = builder.Configuration
-    .GetSection(JwtOptions.SectionName)
-    .Get<JwtOptions>()
-    ?? new JwtOptions();
 
 builder.Services
     .AddAuthentication(options =>
@@ -90,30 +100,14 @@ builder.Services
 
 builder.Services.AddAuthorization();
 
-// CORS configuration
-var allowedOrigins = builder.Configuration
-    .GetSection("Cors:AllowedOrigins")
-    .Get<string[]>()
-    ?? Array.Empty<string>();
-
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("ApiVaultUi", policy =>
+    options.AddPolicy("Web", policy =>
     {
-        if (allowedOrigins.Length > 0)
-        {
-            policy
-                .WithOrigins("http://localhost:4200")
-                .AllowAnyHeader()
-                .AllowAnyMethod();
-        }
-        else if (builder.Environment.IsDevelopment())
-        {
-            policy
-                .AllowAnyOrigin()
-                .AllowAnyHeader()
-                .AllowAnyMethod();
-        }
+        policy
+            .WithOrigins(allowedOrigins)
+            .AllowAnyHeader()
+            .AllowAnyMethod();
     });
 });
 
@@ -122,25 +116,21 @@ var app = builder.Build();
 // Global exception handling
 app.UseMiddleware<ExceptionHandlingMiddleware>();
 
-// Swagger is available in Development
-if (app.Environment.IsDevelopment())
+app.UseSwagger();
+
+app.UseSwaggerUI(options =>
 {
-    app.UseSwagger();
+    options.SwaggerEndpoint(
+        "/swagger/v1/swagger.json",
+        "ApiVault API v1");
 
-    app.UseSwaggerUI(options =>
-    {
-        options.SwaggerEndpoint(
-            "/swagger/v1/swagger.json",
-            "ApiVault API v1");
-
-        options.RoutePrefix = "swagger";
-    });
-}
+    options.RoutePrefix = "swagger";
+});
 
 // HTTP pipeline
 app.UseHttpsRedirection();
 
-app.UseCors("ApiVaultUi");
+app.UseCors("Web");
 
 app.UseAuthentication();
 app.UseAuthorization();

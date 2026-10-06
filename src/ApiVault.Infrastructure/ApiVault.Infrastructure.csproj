@@ -7,6 +7,11 @@
 	</PropertyGroup>
 
 	<ItemGroup>
+		<!-- Archived SQL Server migrations are retained as source history, but must not be applied to Oracle. -->
+		<Compile Remove="Persistence\Migrations\**\*.cs" />
+	</ItemGroup>
+
+	<ItemGroup>
 		<ProjectReference Include="..\ApiVault.Application\ApiVault.Application.csproj" />
 		<ProjectReference Include="..\ApiVault.Domain\ApiVault.Domain.csproj" />
 	</ItemGroup>
@@ -31,8 +36,6 @@
 				buildtransitive
 			</IncludeAssets>
 		</PackageReference>
-
-		<PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" />
 
 		<PackageReference Include="Microsoft.EntityFrameworkCore.Tools">
 		  <PrivateAssets>all</PrivateAssets>

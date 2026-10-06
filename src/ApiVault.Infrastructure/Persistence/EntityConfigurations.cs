@@ -13,10 +13,10 @@ internal static class ConfigurationHelpers
         builder.HasKey(x => x.Id);
 
         builder.Property(x => x.Id)
-            .HasColumnType("uniqueidentifier");
+            .HasColumnType("RAW(16)");
 
         builder.Property(x => x.CreatedAtUtc)
-            .HasColumnType("datetime2(6)")
+            .HasColumnType("TIMESTAMP(6)")
             .IsRequired();
 
         builder.Property(x => x.CreatedBy)
@@ -24,7 +24,7 @@ internal static class ConfigurationHelpers
             .IsRequired();
 
         builder.Property(x => x.UpdatedAtUtc)
-            .HasColumnType("datetime2(6)");
+            .HasColumnType("TIMESTAMP(6)");
 
         builder.Property(x => x.UpdatedBy)
             .HasMaxLength(200);
@@ -97,7 +97,7 @@ public sealed class ApiAssetConfiguration
             .HasMaxLength(200)
             .IsRequired();
 
-        b.Property(x => x.PublishingApplicationId).HasColumnType("uniqueidentifier").IsRequired();
+        b.Property(x => x.PublishingApplicationId).HasColumnType("RAW(16)").IsRequired();
 
         b.Property(x => x.Description)
             .HasMaxLength(4000);
@@ -126,10 +126,10 @@ public sealed class ApiAssetConfiguration
             .HasMaxLength(1000);
 
         b.Property(x => x.BusinessAreaId)
-            .HasColumnType("uniqueidentifier");
+            .HasColumnType("RAW(16)");
 
         b.Property(x => x.DevelopmentTeamId)
-            .HasColumnType("uniqueidentifier");
+            .HasColumnType("RAW(16)");
 
         b.HasIndex(x => new { x.Name, x.PublishingApplicationId })
             .IsUnique();
@@ -161,7 +161,7 @@ public sealed class ApiVersionConfiguration
         ConfigurationHelpers.ConfigureAudit(b);
 
         b.Property(x => x.ApiAssetId)
-            .HasColumnType("uniqueidentifier");
+            .HasColumnType("RAW(16)");
 
         b.Property(x => x.Version)
             .HasMaxLength(50)
@@ -176,16 +176,16 @@ public sealed class ApiVersionConfiguration
             .IsRequired();
 
         b.Property(x => x.ReleaseDateUtc)
-            .HasColumnType("datetime2(6)");
+            .HasColumnType("TIMESTAMP(6)");
 
         b.Property(x => x.DeprecatedAtUtc)
-            .HasColumnType("datetime2(6)");
+            .HasColumnType("TIMESTAMP(6)");
 
         b.Property(x => x.RetiredAtUtc)
-            .HasColumnType("datetime2(6)");
+            .HasColumnType("TIMESTAMP(6)");
 
         b.Property(x => x.ChangeLog)
-            .HasColumnType("nvarchar(max)");
+            .HasColumnType("NCLOB");
 
         b.Property(x => x.AuthenticationType)
             .HasConversion<string>()
@@ -193,13 +193,13 @@ public sealed class ApiVersionConfiguration
             .IsRequired();
 
         b.Property(x => x.AuthenticationInstructions)
-            .HasColumnType("nvarchar(max)");
+            .HasColumnType("NCLOB");
 
         b.Property(x => x.AuthenticationConfigJson)
-            .HasColumnType("nvarchar(max)");
+            .HasColumnType("NCLOB");
 
         b.Property(x => x.IsCurrent)
-            .HasColumnType("bit");
+            .HasColumnType("NUMBER(1)");
 
         b.HasIndex(x => new { x.ApiAssetId, x.Version })
             .IsUnique();
@@ -221,7 +221,7 @@ public sealed class ApiEndpointConfiguration
         ConfigurationHelpers.ConfigureAudit(b);
 
         b.Property(x => x.ApiVersionId)
-            .HasColumnType("uniqueidentifier");
+            .HasColumnType("RAW(16)");
 
         b.Property(x => x.Name)
             .HasMaxLength(200)
@@ -239,25 +239,25 @@ public sealed class ApiEndpointConfiguration
             .HasMaxLength(4000);
 
         b.Property(x => x.RequestHeadersJson)
-            .HasColumnType("nvarchar(max)");
+            .HasColumnType("NCLOB");
 
         b.Property(x => x.QueryParametersJson)
-            .HasColumnType("nvarchar(max)");
+            .HasColumnType("NCLOB");
 
         b.Property(x => x.PathParametersJson)
-            .HasColumnType("nvarchar(max)");
+            .HasColumnType("NCLOB");
 
         b.Property(x => x.RequestPayloadSample)
-            .HasColumnType("nvarchar(max)");
+            .HasColumnType("NCLOB");
 
         b.Property(x => x.ResponseHeadersSampleJson)
-            .HasColumnType("nvarchar(max)");
+            .HasColumnType("NCLOB");
 
         b.Property(x => x.ResponseBodySample)
-            .HasColumnType("nvarchar(max)");
+            .HasColumnType("NCLOB");
 
         b.Property(x => x.SuccessStatusCodesJson)
-            .HasColumnType("nvarchar(max)");
+            .HasColumnType("NCLOB");
 
         b.Property(x => x.SoapAction)
             .HasMaxLength(1000);
@@ -286,7 +286,7 @@ public sealed class ApiEnvironmentConfiguration
         ConfigurationHelpers.ConfigureAudit(b);
 
         b.Property(x => x.ApiVersionId)
-            .HasColumnType("uniqueidentifier");
+            .HasColumnType("RAW(16)");
 
         b.Property(x => x.EnvironmentType)
             .HasConversion<string>()
@@ -298,7 +298,7 @@ public sealed class ApiEnvironmentConfiguration
             .IsRequired();
 
         b.Property(x => x.IsEnabled)
-            .HasColumnType("bit");
+            .HasColumnType("NUMBER(1)");
 
         b.Property(x => x.Notes)
             .HasMaxLength(4000);
@@ -326,14 +326,14 @@ public sealed class EnvironmentSecretConfiguration
         ConfigurationHelpers.ConfigureAudit(b);
 
         b.Property(x => x.ApiEnvironmentId)
-            .HasColumnType("uniqueidentifier");
+            .HasColumnType("RAW(16)");
 
         b.Property(x => x.Name)
             .HasMaxLength(100)
             .IsRequired();
 
         b.Property(x => x.EncryptedValue)
-            .HasColumnType("nvarchar(max)")
+            .HasColumnType("NCLOB")
             .IsRequired();
 
         b.HasIndex(x => new
@@ -380,10 +380,10 @@ public sealed class ProjectConfiguration
             .IsRequired();
 
         b.Property(x => x.BusinessAreaId)
-            .HasColumnType("uniqueidentifier");
+            .HasColumnType("RAW(16)");
 
         b.Property(x => x.OwnerTeamId)
-            .HasColumnType("uniqueidentifier");
+            .HasColumnType("RAW(16)");
 
         b.Property(x => x.OwnershipType)
             .HasConversion<string>()
@@ -391,7 +391,7 @@ public sealed class ProjectConfiguration
             .IsRequired();
 
         b.Property(x => x.VendorId)
-            .HasColumnType("uniqueidentifier");
+            .HasColumnType("RAW(16)");
 
         b.HasIndex(x => x.Code)
             .IsUnique();
@@ -426,7 +426,7 @@ public sealed class VendorConfiguration : IEntityTypeConfiguration<Vendor>
         b.Property(x => x.SupportEmail).HasMaxLength(320);
         b.Property(x => x.SupportPhone).HasMaxLength(100);
         b.Property(x => x.WebsiteUrl).HasMaxLength(1000);
-        b.Property(x => x.IsActive).HasColumnType("bit");
+        b.Property(x => x.IsActive).HasColumnType("NUMBER(1)");
         b.HasIndex(x => x.Code).IsUnique();
         b.HasIndex(x => x.Name).IsUnique();
     }
@@ -442,16 +442,16 @@ public sealed class ProjectApiVersionConfiguration
         ConfigurationHelpers.ConfigureAudit(b);
 
         b.Property(x => x.ProjectId)
-            .HasColumnType("uniqueidentifier");
+            .HasColumnType("RAW(16)");
 
         b.Property(x => x.ApiVersionId)
-            .HasColumnType("uniqueidentifier");
+            .HasColumnType("RAW(16)");
 
         b.Property(x => x.Purpose)
             .HasMaxLength(2000);
 
         b.Property(x => x.IsRequired)
-            .HasColumnType("bit");
+            .HasColumnType("NUMBER(1)");
 
         b.HasIndex(x => new
         {
@@ -501,10 +501,10 @@ public sealed class AppUserConfiguration
             .IsRequired();
 
         b.Property(x => x.IsActive)
-            .HasColumnType("bit");
+            .HasColumnType("NUMBER(1)");
 
         b.Property(x => x.LastLoginAtUtc)
-            .HasColumnType("datetime2(6)");
+            .HasColumnType("TIMESTAMP(6)");
 
         b.HasIndex(x => x.Username)
             .IsUnique();
@@ -521,35 +521,35 @@ public sealed class TestExecutionConfiguration
         ConfigurationHelpers.ConfigureAudit(b);
 
         b.Property(x => x.ApiEndpointId)
-            .HasColumnType("uniqueidentifier");
+            .HasColumnType("RAW(16)");
 
         b.Property(x => x.ApiEnvironmentId)
-            .HasColumnType("uniqueidentifier");
+            .HasColumnType("RAW(16)");
 
         b.Property(x => x.StartedAtUtc)
-            .HasColumnType("datetime2(6)");
+            .HasColumnType("TIMESTAMP(6)");
 
         b.Property(x => x.IsSuccess)
-            .HasColumnType("bit");
+            .HasColumnType("NUMBER(1)");
 
         b.Property(x => x.RequestUrl)
             .HasMaxLength(2000)
             .IsRequired();
 
         b.Property(x => x.RequestHeadersJson)
-            .HasColumnType("nvarchar(max)");
+            .HasColumnType("NCLOB");
 
         b.Property(x => x.RequestBody)
-            .HasColumnType("nvarchar(max)");
+            .HasColumnType("NCLOB");
 
         b.Property(x => x.ResponseHeadersJson)
-            .HasColumnType("nvarchar(max)");
+            .HasColumnType("NCLOB");
 
         b.Property(x => x.ResponseBody)
-            .HasColumnType("nvarchar(max)");
+            .HasColumnType("NCLOB");
 
         b.Property(x => x.ErrorMessage)
-            .HasColumnType("nvarchar(max)");
+            .HasColumnType("NCLOB");
 
         b.HasIndex(x => x.StartedAtUtc);
 
@@ -575,10 +575,10 @@ public sealed class AuditLogConfiguration
         b.HasKey(x => x.Id);
 
         b.Property(x => x.Id)
-            .HasColumnType("uniqueidentifier");
+            .HasColumnType("RAW(16)");
 
         b.Property(x => x.OccurredAtUtc)
-            .HasColumnType("datetime2(6)")
+            .HasColumnType("TIMESTAMP(6)")
             .IsRequired();
 
         b.Property(x => x.UserName)
@@ -604,7 +604,7 @@ public sealed class AuditLogConfiguration
             .IsRequired();
 
         b.Property(x => x.ChangesJson)
-            .HasColumnType("nvarchar(max)");
+            .HasColumnType("NCLOB");
 
         b.HasIndex(x => x.OccurredAtUtc);
 

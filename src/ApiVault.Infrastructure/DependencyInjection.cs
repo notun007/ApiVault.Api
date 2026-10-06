@@ -19,34 +19,16 @@ public static class DependencyInjection
         services.Configure<ExecutionSecurityOptions>(configuration.GetSection(ExecutionSecurityOptions.SectionName));
         services.Configure<DatabaseInitializationOptions>(configuration.GetSection(DatabaseInitializationOptions.SectionName));
 
-        //var connectionString = configuration.GetConnectionString("Oracle")
-        //    ?? throw new InvalidOperationException("ConnectionStrings:Oracle is required.");
-
-        //services.AddDbContext<ApiVaultDbContext>(options =>
-        //{
-        //    options.UseOracle(connectionString, oracleOptions =>
-        //    {
-        //        oracleOptions.UseOracleSQLCompatibility(OracleSQLCompatibility.DatabaseVersion19);
-        //        oracleOptions.MigrationsAssembly(typeof(ApiVaultDbContext).Assembly.FullName);
-        //    });
-        //});
-
-        var connectionString = configuration.GetConnectionString("SqlServer")
-            ?? throw new InvalidOperationException(
-        "ConnectionStrings:SqlServer is required.");
+        var connectionString = configuration.GetConnectionString("Oracle")
+            ?? throw new InvalidOperationException("ConnectionStrings:Oracle is required.");
 
         services.AddDbContext<ApiVaultDbContext>(options =>
         {
-            options.UseSqlServer(connectionString, sqlServerOptions =>
+            options.UseOracle(connectionString, oracleOptions =>
             {
-                sqlServerOptions.UseCompatibilityLevel(150); // SQL Server 2019
-                sqlServerOptions.MigrationsAssembly(
-                    typeof(ApiVaultDbContext).Assembly.FullName);
-
-                sqlServerOptions.EnableRetryOnFailure(
-                    maxRetryCount: 5,
-                    maxRetryDelay: TimeSpan.FromSeconds(10),
-                    errorNumbersToAdd: null);
+                oracleOptions.UseOracleSQLCompatibility(
+                    OracleSQLCompatibility.DatabaseVersion19);
+                oracleOptions.MigrationsAssembly(typeof(ApiVaultDbContext).Assembly.FullName);
             });
         });
 
@@ -57,13 +39,7 @@ public static class DependencyInjection
         services.AddScoped<ITokenService, JwtTokenService>();
         services.AddSingleton<ISecretProtector, DataProtectionSecretProtector>();
 
-        var dataProtectionBuilder = services.AddDataProtection().SetApplicationName("ApiVault");
-        var keysPath = configuration["DataProtection:KeysPath"];
-        if (!string.IsNullOrWhiteSpace(keysPath))
-        {
-            Directory.CreateDirectory(keysPath);
-            dataProtectionBuilder.PersistKeysToFileSystem(new DirectoryInfo(keysPath));
-        }
+        services.AddDataProtection().SetApplicationName("ApiVault");
 
         services.AddHttpClient("ApiVaultExecutor")
             .ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler

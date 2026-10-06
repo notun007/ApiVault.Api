@@ -59,7 +59,6 @@ oracleOptions.UseOracleSQLCompatibility(
 2. Oracle Database 19c with a dedicated schema/user.
 3. Network access from ApiVault to Oracle.
 4. An internal TLS certificate for production hosting.
-5. A protected, persistent ASP.NET Core Data Protection key store.
 
 ## 1. Create the Oracle user
 
@@ -71,43 +70,61 @@ database/01-create-apivault-user.sql
 
 Do not use an Oracle built-in administrative account for EF Core migrations.
 
-## 2. Configure secrets
+## 2. Configure the application
 
-From `src/ApiVault.Api`:
+Set the Oracle connection string, JWT signing key, and allowed Web origins directly in `src/ApiVault.Api/appsettings.json` before publishing. IIS uses the generated `web.config`; no separate environment-configuration script is required.
+
+```json
+"ConnectionStrings": {
+  "Oracle": "User Id=APIVAULT;Password=<password>;Data Source=<host>:1521/<service>;Pooling=true;"
+},
+"Cors": {
+  "Origins": [ "http://172.17.1.227:8020" ]
+}
+```
+
+## 3. Align an existing Oracle database
+
+The Oracle migration chain is in `Persistence/OracleMigrations`. The earlier
+`Persistence/Migrations` files are archived SQL Server migrations and are
+excluded from compilation. Do not apply them to Oracle.
+
+An existing database with the recorded
+`20260731202610_OracleInitialCreate` migration must be upgraded before
+starting the current API. Stop the API, take a database backup, and run
+`database/02-oracle-registry-sync.sql` as the APIVAULT schema owner with
+SQL*Plus. The script validates the baseline and data, creates
+`AV_BAK_20261006_*` copies of affected tables, applies the schema and data
+changes, verifies relationships, and then records
+`20261006044500_OracleRegistrySync`. It preserves the old `API_PROJECT`
+table and inactive security screen for audit. If a preflight check fails, the
+script exits before making changes. If a later statement fails, stop and
+inspect the backup tables before rerunning because Oracle DDL commits
+implicitly.
+
+Afterwards, confirm EF sees no pending migration:
 
 ```bash
-dotnet user-secrets init
-dotnet user-secrets set "ConnectionStrings:Oracle" "User Id=APIVAULT;Password=<password>;Data Source=<host>:1521/<service>;Pooling=true;Min Pool Size=1;Max Pool Size=50;"
-dotnet user-secrets set "Jwt:SigningKey" "<at-least-32-random-bytes>"
-dotnet user-secrets set "DatabaseInitialization:AdminPassword" "<strong-initial-password>"
+dotnet ef migrations list --project src/ApiVault.Infrastructure --startup-project src/ApiVault.Api
 ```
 
-For production, use environment variables, a secrets manager, or your bank's HSM/vault integration instead of user-secrets.
+If existing `APP_USER.Role` values use legacy security codes such as
+`API_OWNER`, run `database/03-oracle-normalize-user-roles.sql` once as the
+APIVAULT schema owner. It backs up user IDs, names, and role values to
+`AV_BAK_20261006_USER_ROLE`, then writes the `UserRole` enum spellings expected
+by EF. This does not change `SEC_ROLE.Code` values.
 
-Environment-variable examples:
-
-```text
-ConnectionStrings__Oracle
-Jwt__SigningKey
-DatabaseInitialization__AdminPassword
-```
-
-## 3. Create the EF Core migration
-
-The model and design-time startup wiring are included. Create and apply the first migration:
+Run the read-only EF query smoke check used by the projects, vendors, and
+security screens and users endpoints:
 
 ```bash
-dotnet tool install --global dotnet-ef --version 10.0.10
-
-dotnet ef migrations add InitialCreate \
-  --project src/ApiVault.Infrastructure \
-  --startup-project src/ApiVault.Api \
-  --output-dir Persistence/Migrations
-
-dotnet ef database update \
-  --project src/ApiVault.Infrastructure \
-  --startup-project src/ApiVault.Api
+dotnet run --project scripts/OracleSmoke -- src/ApiVault.Api/appsettings.json
 ```
+
+For a new empty Oracle schema, `dotnet ef database update` creates the
+current schema from `OracleInitialCreate`; the second migration checks that
+the current schema is present. Keep automatic migrations disabled in a
+running API and use reviewed database changes for later releases.
 
 Enable one-time reference/admin seeding after the schema exists:
 
@@ -117,7 +134,7 @@ dotnet user-secrets set "DatabaseInitialization:ApplyMigrations" "false"
 dotnet user-secrets set "DatabaseInitialization:SeedAdmin" "true"
 ```
 
-For controlled non-production deployments, `ApplyMigrations` can be enabled. In production, keep it disabled and run reviewed migration scripts through the bank's database change process.
+Keep `ApplyMigrations` disabled for the existing database upgrade.
 
 ## 4. Run
 
@@ -130,7 +147,6 @@ Development URLs:
 
 - API: `https://localhost:7185`
 - Health: `https://localhost:7185/health`
-
 
 ## Core workflow
 

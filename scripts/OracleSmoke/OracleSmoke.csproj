@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../../src/ApiVault.Application/ApiVault.Application.csproj" />
+    <ProjectReference Include="../../src/ApiVault.Infrastructure/ApiVault.Infrastructure.csproj" />
+  </ItemGroup>
+</Project>
