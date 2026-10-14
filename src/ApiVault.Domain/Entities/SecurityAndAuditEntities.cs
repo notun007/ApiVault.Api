@@ -84,6 +84,10 @@ public sealed class TestExecution : AuditableEntity
     public string? ResponseBody { get; set; }
     public long ResponseSizeBytes { get; set; }
     public string? ErrorMessage { get; set; }
+    public bool AuthenticationApplied { get; set; }
+    public Guid? AuthenticationProfileId { get; set; }
+    public DateTime? AuthenticationTokenExpiresAtUtc { get; set; }
+    public bool AuthenticationTokenFromCache { get; set; }
 }
 
 public sealed class AuditLog

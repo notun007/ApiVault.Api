@@ -11,6 +11,7 @@ namespace ApiVault.Application.Services;
 public sealed class ApiTestService(
     IApplicationDbContext dbContext,
     IApiTestExecutor executor,
+    IApiAuthenticationProfileResolver authenticationResolver,
     ISecretProtector secretProtector,
     IUserContext userContext)
 {
@@ -19,6 +20,9 @@ public sealed class ApiTestService(
         var endpoint = await dbContext.ApiEndpoints.AsNoTracking()
             .Include(x => x.ApiVersion)
                 .ThenInclude(x => x.ApiAsset)
+            .Include(x => x.ApiVersion)
+                .ThenInclude(x => x.AuthenticationProfile)
+                    .ThenInclude(x => x!.TokenEndpoint)
             .SingleOrDefaultAsync(x => x.Id == request.ApiEndpointId, cancellationToken)
             ?? throw new NotFoundException("API endpoint was not found.");
 
@@ -39,14 +43,38 @@ public sealed class ApiTestService(
             x => secretProtector.Unprotect(x.EncryptedValue),
             StringComparer.OrdinalIgnoreCase);
 
-        var result = await executor.ExecuteAsync(new ApiExecutionContext
+        var profile = endpoint.ApiVersion.AuthenticationProfile;
+        if (profile is not null) profile.ApiVersion = endpoint.ApiVersion;
+        var useAutomaticAuthentication = endpoint.AuthenticationMode == EndpointAuthenticationMode.Inherit &&
+                                         profile is { IsEnabled: true };
+
+        ResolvedAuthentication? authentication = null;
+        if (useAutomaticAuthentication)
+            authentication = await authenticationResolver.ResolveAsync(profile!, environment, secrets, false, cancellationToken);
+
+        var sensitivePaths = profile is not null && profile.TokenEndpointId.HasValue && endpoint.Id == profile.TokenEndpointId
+            ? new[] { profile.TokenJsonPath }
+            : Array.Empty<string>();
+
+        ApiExecutionContext CreateContext(ResolvedAuthentication? resolvedAuthentication) => new()
         {
             Endpoint = endpoint,
             Version = endpoint.ApiVersion,
             Environment = environment,
             Request = request,
-            Secrets = secrets
-        }, cancellationToken);
+            Secrets = secrets,
+            ApplyVersionAuthentication = endpoint.AuthenticationMode == EndpointAuthenticationMode.Inherit,
+            Authentication = resolvedAuthentication,
+            SensitiveResponseJsonPaths = sensitivePaths
+        };
+
+        var result = await executor.ExecuteAsync(CreateContext(authentication), cancellationToken);
+        if (useAutomaticAuthentication && result.ResponseStatusCode == 401)
+        {
+            authenticationResolver.Invalidate(profile!.Id, environment.Id);
+            authentication = await authenticationResolver.ResolveAsync(profile, environment, secrets, true, cancellationToken);
+            result = await executor.ExecuteAsync(CreateContext(authentication), cancellationToken);
+        }
 
         var entity = new TestExecution
         {
@@ -64,6 +92,10 @@ public sealed class ApiTestService(
             ResponseBody = result.ResponseBody,
             ResponseSizeBytes = result.ResponseSizeBytes,
             ErrorMessage = result.ErrorMessage,
+            AuthenticationApplied = result.AuthenticationApplied,
+            AuthenticationProfileId = result.AuthenticationProfileId,
+            AuthenticationTokenExpiresAtUtc = result.AuthenticationTokenExpiresAtUtc,
+            AuthenticationTokenFromCache = result.AuthenticationTokenFromCache,
             CreatedBy = userContext.UserName
         };
         dbContext.TestExecutions.Add(entity);
@@ -103,6 +135,10 @@ public sealed class ApiTestService(
         ResponseBody = entity.ResponseBody,
         ResponseSizeBytes = entity.ResponseSizeBytes,
         ErrorMessage = entity.ErrorMessage,
-        RequestedBy = entity.CreatedBy
+        RequestedBy = entity.CreatedBy,
+        AuthenticationApplied = entity.AuthenticationApplied,
+        AuthenticationProfileId = entity.AuthenticationProfileId,
+        AuthenticationTokenExpiresAtUtc = entity.AuthenticationTokenExpiresAtUtc,
+        AuthenticationTokenFromCache = entity.AuthenticationTokenFromCache
     };
 }

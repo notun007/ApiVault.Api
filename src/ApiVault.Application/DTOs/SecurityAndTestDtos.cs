@@ -61,6 +61,10 @@ public sealed class TestExecutionResponse
     public long ResponseSizeBytes { get; set; }
     public string? ErrorMessage { get; set; }
     public string RequestedBy { get; set; } = string.Empty;
+    public bool AuthenticationApplied { get; set; }
+    public Guid? AuthenticationProfileId { get; set; }
+    public DateTime? AuthenticationTokenExpiresAtUtc { get; set; }
+    public bool AuthenticationTokenFromCache { get; set; }
 }
 
 public sealed class AuditLogResponse

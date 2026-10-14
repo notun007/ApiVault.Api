@@ -44,6 +44,9 @@
 
 		<PackageReference Include="Oracle.EntityFrameworkCore" VersionOverride="10.23.26200" />
 
+		<!-- Pin Oracle.ManagedDataAccess.Core's vulnerable 8.0.1 transitive dependency. -->
+		<PackageReference Include="System.Security.Cryptography.Pkcs" />
+
 		<PackageReference Include="System.IdentityModel.Tokens.Jwt" VersionOverride="8.19.1" />
 	</ItemGroup>
 

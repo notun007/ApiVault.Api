@@ -124,6 +124,7 @@ public sealed class ApiVersionResponse
     public int MaxResponseBytes { get; set; }
     public int TimeoutSeconds { get; set; }
     public bool IsCurrent { get; set; }
+    public AuthenticationProfileResponse? AuthenticationProfile { get; set; }
     public IReadOnlyList<ApiVersionConsumerResponse> Consumers { get; set; } = Array.Empty<ApiVersionConsumerResponse>();
     public IReadOnlyList<EndpointResponse> Endpoints { get; set; } = Array.Empty<EndpointResponse>();
     public IReadOnlyList<EnvironmentResponse> Environments { get; set; } = Array.Empty<EnvironmentResponse>();
@@ -153,6 +154,7 @@ public sealed class CreateEndpointRequest
     public string? ResponseBodySample { get; set; }
     public string? SuccessStatusCodesJson { get; set; }
     [MaxLength(1000)] public string? SoapAction { get; set; }
+    public EndpointAuthenticationMode AuthenticationMode { get; set; } = EndpointAuthenticationMode.Inherit;
 }
 
 public sealed class EndpointResponse
@@ -170,6 +172,56 @@ public sealed class EndpointResponse
     public string? ResponseBodySample { get; set; }
     public string? SuccessStatusCodesJson { get; set; }
     public string? SoapAction { get; set; }
+    public EndpointAuthenticationMode AuthenticationMode { get; set; }
+}
+
+public sealed class UpsertAuthenticationProfileRequest
+{
+    [Required, MaxLength(200)] public string Name { get; set; } = "Automatic bearer authentication";
+    public AuthenticationProfileType Type { get; set; } = AuthenticationProfileType.TokenEndpoint;
+    public Guid? TokenEndpointId { get; set; }
+    [Required, MaxLength(500)] public string TokenJsonPath { get; set; } = "$.accessToken";
+    [MaxLength(500)] public string? TokenTypeJsonPath { get; set; } = "$.tokenType";
+    [MaxLength(500)] public string? ExpiresAtJsonPath { get; set; } = "$.expiresAtUtc";
+    [MaxLength(500)] public string? ExpiresInJsonPath { get; set; }
+    [Required, RegularExpression("^[A-Za-z0-9-]{1,100}$")] public string HeaderName { get; set; } = "Authorization";
+    public string? ConfigurationJson { get; set; }
+    [Range(0, 3600)] public int RefreshSkewSeconds { get; set; } = 60;
+    public bool IsEnabled { get; set; } = true;
+}
+
+public sealed class AuthenticationProfileResponse
+{
+    public Guid Id { get; set; }
+    public string Name { get; set; } = string.Empty;
+    public AuthenticationProfileType Type { get; set; }
+    public Guid? TokenEndpointId { get; set; }
+    public string? TokenEndpointName { get; set; }
+    public string? TokenEndpointMethod { get; set; }
+    public string? TokenEndpointPath { get; set; }
+    public string TokenJsonPath { get; set; } = string.Empty;
+    public string? TokenTypeJsonPath { get; set; }
+    public string? ExpiresAtJsonPath { get; set; }
+    public string? ExpiresInJsonPath { get; set; }
+    public string HeaderName { get; set; } = string.Empty;
+    public string? ConfigurationJson { get; set; }
+    public int RefreshSkewSeconds { get; set; }
+    public bool IsEnabled { get; set; }
+}
+
+public sealed class TestAuthenticationProfileRequest
+{
+    [Required] public Guid ApiEnvironmentId { get; set; }
+}
+
+public sealed class AuthenticationProfileTestResponse
+{
+    public bool IsSuccess { get; set; }
+    public AuthenticationProfileType Type { get; set; }
+    public string Summary { get; set; } = string.Empty;
+    public string? TokenType { get; set; }
+    public DateTime? ExpiresAtUtc { get; set; }
+    public bool FromCache { get; set; }
 }
 
 public sealed class CreateEnvironmentRequest

@@ -1,8 +1,10 @@
 using System.Diagnostics;
 using System.Net.Http.Headers;
+using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using System.Security.Cryptography.X509Certificates;
 using ApiVault.Application.Abstractions;
 using ApiVault.Application.Common;
 using ApiVault.Application.Models;
@@ -12,26 +14,27 @@ using Microsoft.Extensions.Options;
 
 namespace ApiVault.Infrastructure.Http;
 
-public sealed partial class ApiTestExecutor(
+public sealed class ApiTestExecutor(
     IHttpClientFactory httpClientFactory,
     SsrfGuard ssrfGuard,
     SecretRedactor redactor,
+    SecretTemplateResolver templates,
     IOptions<ExecutionSecurityOptions> options) : IApiTestExecutor
 {
-    [GeneratedRegex(@"\{\{secret:([A-Za-z0-9_.-]+)\}\}", RegexOptions.IgnoreCase)]
-    private static partial Regex SecretPlaceholderRegex();
-
     public async Task<ApiExecutionResult> ExecuteAsync(ApiExecutionContext context, CancellationToken cancellationToken)
     {
         var startedAt = DateTime.UtcNow;
         var stopwatch = Stopwatch.StartNew();
         var requestUrl = context.Environment.BaseUrl;
         Dictionary<string, string> effectiveHeaders = new(StringComparer.OrdinalIgnoreCase);
-        var secretValues = context.Secrets.Values.ToArray();
+        var secretValues = context.Authentication is null
+            ? context.Secrets.Values.ToArray()
+            : context.Secrets.Values.Concat(context.Authentication.Headers.Values).ToArray();
         var requestBody = context.Request.Body ?? context.Endpoint.RequestPayloadSample;
 
         try
         {
+            requestBody = templates.Resolve(requestBody, context.Secrets);
             var uri = BuildTargetUri(context);
             requestUrl = uri.ToString();
             await ssrfGuard.ValidateAsync(uri, cancellationToken);
@@ -62,7 +65,9 @@ public sealed partial class ApiTestExecutor(
 
             using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
             timeoutCts.CancelAfter(TimeSpan.FromSeconds(timeoutSeconds));
-            var client = httpClientFactory.CreateClient("ApiVaultExecutor");
+            using var certificate = LoadClientCertificate(context.Authentication);
+            using var certificateClient = certificate is null ? null : CreateCertificateClient(certificate);
+            var client = certificateClient ?? httpClientFactory.CreateClient("ApiVaultExecutor");
             using var response = await client.SendAsync(requestMessage, HttpCompletionOption.ResponseHeadersRead, timeoutCts.Token);
 
             if (response.Content.Headers.ContentLength > maxResponseBytes)
@@ -71,6 +76,7 @@ public sealed partial class ApiTestExecutor(
 
             var responseBytes = await ReadLimitedAsync(response, maxResponseBytes, timeoutCts.Token);
             var responseBody = DecodeBody(responseBytes, response.Content.Headers.ContentType);
+            responseBody = redactor.RedactJsonPaths(responseBody, context.SensitiveResponseJsonPaths);
             var responseHeaders = response.Headers.Concat(response.Content.Headers)
                 .ToDictionary(x => x.Key, x => string.Join(", ", x.Value), StringComparer.OrdinalIgnoreCase);
 
@@ -87,7 +93,11 @@ public sealed partial class ApiTestExecutor(
                 RequestSizeBytes = requestSize,
                 ResponseHeadersJson = redactor.SerializeHeaders(responseHeaders, secretValues),
                 ResponseBody = redactor.RedactText(responseBody, secretValues),
-                ResponseSizeBytes = responseBytes.LongLength
+                ResponseSizeBytes = responseBytes.LongLength,
+                AuthenticationApplied = context.Authentication is not null,
+                AuthenticationProfileId = context.Authentication?.ProfileId,
+                AuthenticationTokenExpiresAtUtc = context.Authentication?.ExpiresAtUtc,
+                AuthenticationTokenFromCache = context.Authentication?.FromCache ?? false
             };
         }
         catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
@@ -110,15 +120,21 @@ public sealed partial class ApiTestExecutor(
             RequestHeadersJson = redactor.SerializeHeaders(effectiveHeaders, secretValues),
             RequestBody = redactor.RedactText(requestBody, secretValues),
             RequestSizeBytes = requestBody is null ? 0 : Encoding.UTF8.GetByteCount(requestBody),
-            ErrorMessage = redactor.RedactText(error, secretValues)
+            ErrorMessage = redactor.RedactText(error, secretValues),
+            AuthenticationApplied = context.Authentication is not null,
+            AuthenticationProfileId = context.Authentication?.ProfileId,
+            AuthenticationTokenExpiresAtUtc = context.Authentication?.ExpiresAtUtc,
+            AuthenticationTokenFromCache = context.Authentication?.FromCache ?? false
         };
     }
 
-    private static Uri BuildTargetUri(ApiExecutionContext context)
+    private Uri BuildTargetUri(ApiExecutionContext context)
     {
         var path = context.Endpoint.RelativePath;
         foreach (var parameter in context.Request.PathParameters)
-            path = path.Replace($"{{{parameter.Key}}}", Uri.EscapeDataString(parameter.Value), StringComparison.OrdinalIgnoreCase);
+            path = path.Replace($"{{{parameter.Key}}}",
+                Uri.EscapeDataString(templates.Resolve(parameter.Value, context.Secrets) ?? string.Empty),
+                StringComparison.OrdinalIgnoreCase);
 
         if (Regex.IsMatch(path, @"\{[^{}]+\}"))
             throw new RequestValidationException("One or more path parameters were not supplied.");
@@ -129,12 +145,12 @@ public sealed partial class ApiTestExecutor(
         var queryParts = new List<string>();
         if (!string.IsNullOrWhiteSpace(builder.Query)) queryParts.Add(builder.Query.TrimStart('?'));
         queryParts.AddRange(context.Request.QueryParameters.Select(x =>
-            $"{Uri.EscapeDataString(x.Key)}={Uri.EscapeDataString(x.Value)}"));
+            $"{Uri.EscapeDataString(x.Key)}={Uri.EscapeDataString(templates.Resolve(x.Value, context.Secrets) ?? string.Empty)}"));
         builder.Query = string.Join("&", queryParts.Where(x => !string.IsNullOrWhiteSpace(x)));
         return builder.Uri;
     }
 
-    private static Dictionary<string, string> BuildHeaders(ApiExecutionContext context)
+    private Dictionary<string, string> BuildHeaders(ApiExecutionContext context)
     {
         var headers = ParseHeaderObject(context.Endpoint.RequestHeadersJson);
         foreach (var header in context.Request.Headers)
@@ -143,7 +159,7 @@ public sealed partial class ApiTestExecutor(
             headers["SOAPAction"] = context.Endpoint.SoapAction;
 
         foreach (var key in headers.Keys.ToList())
-            headers[key] = ResolveSecretPlaceholders(headers[key], context.Secrets);
+            headers[key] = templates.Resolve(headers[key], context.Secrets) ?? string.Empty;
         return headers;
     }
 
@@ -167,17 +183,16 @@ public sealed partial class ApiTestExecutor(
         return result;
     }
 
-    private static string ResolveSecretPlaceholders(string value, IReadOnlyDictionary<string, string> secrets) =>
-        SecretPlaceholderRegex().Replace(value, match =>
-        {
-            var name = match.Groups[1].Value;
-            if (!secrets.TryGetValue(name, out var secret))
-                throw new RequestValidationException($"Secret '{name}' is not configured for the selected environment.");
-            return secret;
-        });
-
     private static void ApplyAuthentication(ApiExecutionContext context, IDictionary<string, string> headers)
     {
+        if (!context.ApplyVersionAuthentication) return;
+        if (context.Authentication is not null)
+        {
+            foreach (var header in context.Authentication.Headers)
+                headers[header.Key] = header.Value;
+            return;
+        }
+
         switch (context.Version.AuthenticationType)
         {
             case AuthenticationType.Bearer:
@@ -231,6 +246,35 @@ public sealed partial class ApiTestExecutor(
         if (headers.TryGetValue("Content-Type", out var contentType))
             return contentType.Split(';', 2)[0].Trim();
         return context.Version.ApiAsset.Protocol == ApiProtocol.Soap ? "text/xml" : "application/json";
+    }
+
+    private static X509Certificate2? LoadClientCertificate(ResolvedAuthentication? authentication)
+    {
+        if (authentication?.ClientCertificatePfx is not { Length: > 0 } pfx) return null;
+        try
+        {
+            return X509CertificateLoader.LoadPkcs12(
+                pfx,
+                authentication.ClientCertificatePassword,
+                X509KeyStorageFlags.EphemeralKeySet);
+        }
+        catch (CryptographicException)
+        {
+            throw new RequestValidationException("The mutual TLS certificate or its password is invalid.");
+        }
+    }
+
+    private static HttpClient CreateCertificateClient(X509Certificate2 certificate)
+    {
+        var handler = new SocketsHttpHandler
+        {
+            AllowAutoRedirect = false,
+            AutomaticDecompression = System.Net.DecompressionMethods.All,
+            UseCookies = false,
+            ConnectTimeout = TimeSpan.FromSeconds(10),
+            SslOptions = { ClientCertificates = new X509CertificateCollection { certificate } }
+        };
+        return new HttpClient(handler, disposeHandler: true) { Timeout = Timeout.InfiniteTimeSpan };
     }
 
     private static async Task<byte[]> ReadLimitedAsync(HttpResponseMessage response, int maxBytes, CancellationToken cancellationToken)

@@ -59,6 +59,24 @@ public sealed class ApisController(ApiCatalogService service) : ControllerBase
         Ok(await service.UpdateVersionAsync(apiId, versionId, request, cancellationToken));
 
     [Authorize(Roles = "Admin,ApiOwner")]
+    [HttpPut("{apiId:guid}/versions/{versionId:guid}/authentication-profile")]
+    public async Task<ActionResult<AuthenticationProfileResponse>> UpsertAuthenticationProfile(
+        Guid apiId,
+        Guid versionId,
+        UpsertAuthenticationProfileRequest request,
+        CancellationToken cancellationToken) =>
+        Ok(await service.UpsertAuthenticationProfileAsync(apiId, versionId, request, cancellationToken));
+
+    [Authorize(Roles = "Admin,ApiOwner,Tester")]
+    [HttpPost("{apiId:guid}/versions/{versionId:guid}/authentication-profile/test")]
+    public async Task<ActionResult<AuthenticationProfileTestResponse>> TestAuthenticationProfile(
+        Guid apiId,
+        Guid versionId,
+        TestAuthenticationProfileRequest request,
+        CancellationToken cancellationToken) =>
+        Ok(await service.TestAuthenticationProfileAsync(apiId, versionId, request, cancellationToken));
+
+    [Authorize(Roles = "Admin,ApiOwner")]
     [HttpPatch("{apiId:guid}/versions/{versionId:guid}/lifecycle")]
     public async Task<ActionResult<ApiVersionResponse>> ChangeLifecycle(
         Guid apiId,

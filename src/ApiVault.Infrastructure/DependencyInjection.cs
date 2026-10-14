@@ -40,6 +40,7 @@ public static class DependencyInjection
         services.AddSingleton<ISecretProtector, DataProtectionSecretProtector>();
 
         services.AddDataProtection().SetApplicationName("ApiVault");
+        services.AddMemoryCache();
 
         services.AddHttpClient("ApiVaultExecutor")
             .ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler
@@ -52,6 +53,9 @@ public static class DependencyInjection
             });
         services.AddScoped<SsrfGuard>();
         services.AddScoped<SecretRedactor>();
+        services.AddScoped<SecretTemplateResolver>();
+        services.AddScoped<IApiAuthenticationTokenProvider, EndpointAuthenticationTokenProvider>();
+        services.AddScoped<IApiAuthenticationProfileResolver, AuthenticationProfileResolver>();
         services.AddScoped<IApiTestExecutor, ApiTestExecutor>();
         services.AddScoped<DatabaseSeeder>();
         return services;

@@ -102,6 +102,84 @@ namespace ApiVault.Infrastructure.Persistence.OracleMigrations
                     b.ToTable("API_ASSET", (string)null);
                 });
 
+            modelBuilder.Entity("ApiVault.Domain.Entities.ApiAuthenticationProfile", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("RAW(16)");
+
+                    b.Property<Guid>("ApiVersionId")
+                        .HasColumnType("RAW(16)");
+
+                    b.Property<string>("ConfigurationJson")
+                        .HasColumnType("CLOB");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("TIMESTAMP(6)");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("NVARCHAR2(200)");
+
+                    b.Property<string>("ExpiresAtJsonPath")
+                        .HasMaxLength(500)
+                        .HasColumnType("NVARCHAR2(500)");
+
+                    b.Property<string>("ExpiresInJsonPath")
+                        .HasMaxLength(500)
+                        .HasColumnType("NVARCHAR2(500)");
+
+                    b.Property<string>("HeaderName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("NVARCHAR2(100)");
+
+                    b.Property<bool>("IsEnabled")
+                        .HasColumnType("NUMBER(1)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("NVARCHAR2(200)");
+
+                    b.Property<int>("RefreshSkewSeconds")
+                        .HasColumnType("NUMBER(10)");
+
+                    b.Property<Guid?>("TokenEndpointId")
+                        .HasColumnType("RAW(16)");
+
+                    b.Property<string>("TokenJsonPath")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("NVARCHAR2(500)");
+
+                    b.Property<string>("TokenTypeJsonPath")
+                        .HasMaxLength(500)
+                        .HasColumnType("NVARCHAR2(500)");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("NVARCHAR2(50)");
+
+                    b.Property<DateTime?>("UpdatedAtUtc")
+                        .HasColumnType("TIMESTAMP(6)");
+
+                    b.Property<string>("UpdatedBy")
+                        .HasMaxLength(200)
+                        .HasColumnType("NVARCHAR2(200)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ApiVersionId")
+                        .IsUnique();
+
+                    b.HasIndex("TokenEndpointId");
+
+                    b.ToTable("API_AUTH_PROFILE", (string)null);
+                });
+
             modelBuilder.Entity("ApiVault.Domain.Entities.ApiEndpoint", b =>
                 {
                     b.Property<Guid>("Id")
@@ -110,6 +188,11 @@ namespace ApiVault.Infrastructure.Persistence.OracleMigrations
 
                     b.Property<Guid>("ApiVersionId")
                         .HasColumnType("RAW(16)");
+
+                    b.Property<string>("AuthenticationMode")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("NVARCHAR2(30)");
 
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("TIMESTAMP(6)");
@@ -909,6 +992,18 @@ namespace ApiVault.Infrastructure.Persistence.OracleMigrations
                     b.Property<Guid>("ApiEnvironmentId")
                         .HasColumnType("RAW(16)");
 
+                    b.Property<bool>("AuthenticationApplied")
+                        .HasColumnType("NUMBER(1)");
+
+                    b.Property<Guid?>("AuthenticationProfileId")
+                        .HasColumnType("RAW(16)");
+
+                    b.Property<DateTime?>("AuthenticationTokenExpiresAtUtc")
+                        .HasColumnType("TIMESTAMP(6)");
+
+                    b.Property<bool>("AuthenticationTokenFromCache")
+                        .HasColumnType("NUMBER(1)");
+
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("TIMESTAMP(6)");
 
@@ -1063,6 +1158,24 @@ namespace ApiVault.Infrastructure.Persistence.OracleMigrations
                     b.Navigation("DevelopmentTeam");
 
                     b.Navigation("PublishingApplication");
+                });
+
+            modelBuilder.Entity("ApiVault.Domain.Entities.ApiAuthenticationProfile", b =>
+                {
+                    b.HasOne("ApiVault.Domain.Entities.ApiVersion", "ApiVersion")
+                        .WithOne("AuthenticationProfile")
+                        .HasForeignKey("ApiVault.Domain.Entities.ApiAuthenticationProfile", "ApiVersionId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("ApiVault.Domain.Entities.ApiEndpoint", "TokenEndpoint")
+                        .WithMany()
+                        .HasForeignKey("TokenEndpointId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("ApiVersion");
+
+                    b.Navigation("TokenEndpoint");
                 });
 
             modelBuilder.Entity("ApiVault.Domain.Entities.ApiEndpoint", b =>
@@ -1246,6 +1359,8 @@ namespace ApiVault.Infrastructure.Persistence.OracleMigrations
 
             modelBuilder.Entity("ApiVault.Domain.Entities.ApiVersion", b =>
                 {
+                    b.Navigation("AuthenticationProfile");
+
                     b.Navigation("Endpoints");
 
                     b.Navigation("Environments");

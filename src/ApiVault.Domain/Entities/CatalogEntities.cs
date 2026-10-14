@@ -78,6 +78,7 @@ public sealed class ApiVersion : AuditableEntity
     public int MaxResponseBytes { get; set; } = 5_242_880;
     public int TimeoutSeconds { get; set; } = 30;
     public bool IsCurrent { get; set; }
+    public ApiAuthenticationProfile? AuthenticationProfile { get; set; }
     public ICollection<ApiEndpoint> Endpoints { get; set; } = new List<ApiEndpoint>();
     public ICollection<ApiEnvironment> Environments { get; set; } = new List<ApiEnvironment>();
     public ICollection<ProjectApiVersion> ProjectLinks { get; set; } = new List<ProjectApiVersion>();
@@ -99,7 +100,26 @@ public sealed class ApiEndpoint : AuditableEntity
     public string? ResponseBodySample { get; set; }
     public string? SuccessStatusCodesJson { get; set; }
     public string? SoapAction { get; set; }
+    public EndpointAuthenticationMode AuthenticationMode { get; set; } = EndpointAuthenticationMode.Inherit;
     public ICollection<TestExecution> TestExecutions { get; set; } = new List<TestExecution>();
+}
+
+public sealed class ApiAuthenticationProfile : AuditableEntity
+{
+    public Guid ApiVersionId { get; set; }
+    public ApiVersion ApiVersion { get; set; } = null!;
+    public string Name { get; set; } = string.Empty;
+    public AuthenticationProfileType Type { get; set; } = AuthenticationProfileType.TokenEndpoint;
+    public Guid? TokenEndpointId { get; set; }
+    public ApiEndpoint? TokenEndpoint { get; set; }
+    public string TokenJsonPath { get; set; } = "$.accessToken";
+    public string? TokenTypeJsonPath { get; set; } = "$.tokenType";
+    public string? ExpiresAtJsonPath { get; set; } = "$.expiresAtUtc";
+    public string? ExpiresInJsonPath { get; set; }
+    public string HeaderName { get; set; } = "Authorization";
+    public string? ConfigurationJson { get; set; }
+    public int RefreshSkewSeconds { get; set; } = 60;
+    public bool IsEnabled { get; set; } = true;
 }
 
 public sealed class ApiEnvironment : AuditableEntity

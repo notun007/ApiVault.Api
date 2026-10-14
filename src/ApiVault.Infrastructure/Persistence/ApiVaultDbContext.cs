@@ -16,6 +16,7 @@ public sealed class ApiVaultDbContext(
     public DbSet<ApiAsset> ApiAssets => Set<ApiAsset>();
     public DbSet<ApiVersion> ApiVersions => Set<ApiVersion>();
     public DbSet<ApiEndpoint> ApiEndpoints => Set<ApiEndpoint>();
+    public DbSet<ApiAuthenticationProfile> ApiAuthenticationProfiles => Set<ApiAuthenticationProfile>();
     public DbSet<ApiEnvironment> ApiEnvironments => Set<ApiEnvironment>();
     public DbSet<EnvironmentSecret> EnvironmentSecrets => Set<EnvironmentSecret>();
     public DbSet<Project> Projects => Set<Project>();

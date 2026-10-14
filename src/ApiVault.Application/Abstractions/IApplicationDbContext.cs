@@ -10,6 +10,7 @@ public interface IApplicationDbContext
     DbSet<ApiAsset> ApiAssets { get; }
     DbSet<ApiVersion> ApiVersions { get; }
     DbSet<ApiEndpoint> ApiEndpoints { get; }
+    DbSet<ApiAuthenticationProfile> ApiAuthenticationProfiles { get; }
     DbSet<ApiEnvironment> ApiEnvironments { get; }
     DbSet<EnvironmentSecret> EnvironmentSecrets { get; }
     DbSet<Project> Projects { get; }

@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using ApiVault.Infrastructure.Options;
 using Microsoft.Extensions.Options;
 
@@ -33,5 +34,42 @@ public sealed class SecretRedactor(IOptions<ExecutionSecurityOptions> options)
             result = result.Replace(secret, "***REDACTED***", StringComparison.Ordinal);
         }
         return result;
+    }
+
+    public string RedactJsonPaths(string value, IEnumerable<string> jsonPaths)
+    {
+        var paths = jsonPaths.Where(x => !string.IsNullOrWhiteSpace(x)).Distinct(StringComparer.Ordinal).ToArray();
+        if (paths.Length == 0 || string.IsNullOrWhiteSpace(value)) return value;
+
+        try
+        {
+            var root = JsonNode.Parse(value);
+            if (root is null) return value;
+
+            foreach (var path in paths)
+            {
+                var segments = path.Trim().TrimStart('$').TrimStart('.').Split('.', StringSplitOptions.RemoveEmptyEntries);
+                if (segments.Length == 0) continue;
+
+                JsonNode? current = root;
+                for (var index = 0; index < segments.Length - 1 && current is JsonObject currentObject; index++)
+                {
+                    var key = currentObject.Select(x => x.Key)
+                        .FirstOrDefault(x => string.Equals(x, segments[index], StringComparison.OrdinalIgnoreCase));
+                    current = key is null ? null : currentObject[key];
+                }
+
+                if (current is not JsonObject parent) continue;
+                var finalKey = parent.Select(x => x.Key)
+                    .FirstOrDefault(x => string.Equals(x, segments[^1], StringComparison.OrdinalIgnoreCase));
+                if (finalKey is not null) parent[finalKey] = "***REDACTED***";
+            }
+
+            return root.ToJsonString(new JsonSerializerOptions { WriteIndented = true });
+        }
+        catch (JsonException)
+        {
+            return value;
+        }
     }
 }

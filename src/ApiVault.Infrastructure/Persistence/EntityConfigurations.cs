@@ -262,6 +262,11 @@ public sealed class ApiEndpointConfiguration
         b.Property(x => x.SoapAction)
             .HasMaxLength(1000);
 
+        b.Property(x => x.AuthenticationMode)
+            .HasConversion<string>()
+            .HasMaxLength(30)
+            .IsRequired();
+
         b.HasIndex(x => new
         {
             x.ApiVersionId,
@@ -272,6 +277,40 @@ public sealed class ApiEndpointConfiguration
         b.HasOne(x => x.ApiVersion)
             .WithMany(x => x.Endpoints)
             .HasForeignKey(x => x.ApiVersionId)
+            .OnDelete(DeleteBehavior.Restrict);
+    }
+}
+
+public sealed class ApiAuthenticationProfileConfiguration
+    : IEntityTypeConfiguration<ApiAuthenticationProfile>
+{
+    public void Configure(EntityTypeBuilder<ApiAuthenticationProfile> b)
+    {
+        b.ToTable("API_AUTH_PROFILE");
+        ConfigurationHelpers.ConfigureAudit(b);
+
+        b.Property(x => x.ApiVersionId).HasColumnType("RAW(16)");
+        b.Property(x => x.TokenEndpointId).HasColumnType("RAW(16)");
+        b.Property(x => x.Name).HasMaxLength(200).IsRequired();
+        b.Property(x => x.Type).HasConversion<string>().HasMaxLength(50).IsRequired();
+        b.Property(x => x.TokenJsonPath).HasMaxLength(500).IsRequired();
+        b.Property(x => x.TokenTypeJsonPath).HasMaxLength(500);
+        b.Property(x => x.ExpiresAtJsonPath).HasMaxLength(500);
+        b.Property(x => x.ExpiresInJsonPath).HasMaxLength(500);
+        b.Property(x => x.HeaderName).HasMaxLength(100).IsRequired();
+        b.Property(x => x.ConfigurationJson).HasColumnType("CLOB");
+        b.Property(x => x.IsEnabled).HasColumnType("NUMBER(1)");
+
+        b.HasIndex(x => x.ApiVersionId).IsUnique();
+
+        b.HasOne(x => x.ApiVersion)
+            .WithOne(x => x.AuthenticationProfile)
+            .HasForeignKey<ApiAuthenticationProfile>(x => x.ApiVersionId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        b.HasOne(x => x.TokenEndpoint)
+            .WithMany()
+            .HasForeignKey(x => x.TokenEndpointId)
             .OnDelete(DeleteBehavior.Restrict);
     }
 }
@@ -530,6 +569,18 @@ public sealed class TestExecutionConfiguration
             .HasColumnType("TIMESTAMP(6)");
 
         b.Property(x => x.IsSuccess)
+            .HasColumnType("NUMBER(1)");
+
+        b.Property(x => x.AuthenticationApplied)
+            .HasColumnType("NUMBER(1)");
+
+        b.Property(x => x.AuthenticationProfileId)
+            .HasColumnType("RAW(16)");
+
+        b.Property(x => x.AuthenticationTokenExpiresAtUtc)
+            .HasColumnType("TIMESTAMP(6)");
+
+        b.Property(x => x.AuthenticationTokenFromCache)
             .HasColumnType("NUMBER(1)");
 
         b.Property(x => x.RequestUrl)

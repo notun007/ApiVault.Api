@@ -32,6 +32,23 @@ public enum AuthenticationType
     Custom = 99
 }
 
+public enum EndpointAuthenticationMode
+{
+    Inherit = 1,
+    Anonymous = 2
+}
+
+public enum AuthenticationProfileType
+{
+    TokenEndpoint = 1,
+    OAuth2ClientCredentials = 2,
+    Basic = 3,
+    ApiKey = 4,
+    StaticBearer = 5,
+    CustomHeaders = 6,
+    MutualTls = 7
+}
+
 public enum DeploymentEnvironment
 {
     Development = 1,

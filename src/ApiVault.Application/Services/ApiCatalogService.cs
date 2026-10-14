@@ -8,7 +8,10 @@ using Microsoft.EntityFrameworkCore;
 
 namespace ApiVault.Application.Services;
 
-public sealed class ApiCatalogService(IApplicationDbContext dbContext, ISecretProtector secretProtector)
+public sealed class ApiCatalogService(
+    IApplicationDbContext dbContext,
+    ISecretProtector secretProtector,
+    IApiAuthenticationProfileResolver authenticationResolver)
 {
     private static readonly HashSet<string> SupportedMethods = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -96,6 +99,9 @@ public sealed class ApiCatalogService(IApplicationDbContext dbContext, ISecretPr
                 .ThenInclude(x => x.Vendor)
             .Include(x => x.Versions)
                 .ThenInclude(x => x.Endpoints)
+            .Include(x => x.Versions)
+                .ThenInclude(x => x.AuthenticationProfile)
+                    .ThenInclude(x => x!.TokenEndpoint)
             .Include(x => x.Versions)
                 .ThenInclude(x => x.Environments)
                     .ThenInclude(x => x.Secrets)
@@ -263,6 +269,111 @@ public sealed class ApiCatalogService(IApplicationDbContext dbContext, ISecretPr
         return await GetVersionAsync(entity.Id, cancellationToken);
     }
 
+    public async Task<AuthenticationProfileResponse> UpsertAuthenticationProfileAsync(
+        Guid apiId,
+        Guid versionId,
+        UpsertAuthenticationProfileRequest request,
+        CancellationToken cancellationToken)
+    {
+        var version = await dbContext.ApiVersions
+            .Include(x => x.AuthenticationProfile)
+            .SingleOrDefaultAsync(x => x.Id == versionId && x.ApiAssetId == apiId, cancellationToken)
+            ?? throw new NotFoundException("API version was not found.");
+
+        if (!Enum.IsDefined(request.Type))
+            throw new RequestValidationException("Authentication profile type is invalid.");
+
+        ApiEndpoint? tokenEndpoint = null;
+        if (UsesTokenEndpoint(request.Type))
+        {
+            if (!request.TokenEndpointId.HasValue)
+                throw new RequestValidationException("A token endpoint is required for this authentication profile type.");
+            tokenEndpoint = await dbContext.ApiEndpoints.SingleOrDefaultAsync(
+                x => x.Id == request.TokenEndpointId.Value && x.ApiVersionId == versionId,
+                cancellationToken)
+                ?? throw new RequestValidationException("The authentication endpoint must belong to this API version.");
+            ValidateJsonPath(request.TokenJsonPath, nameof(request.TokenJsonPath), required: true);
+            ValidateJsonPath(request.TokenTypeJsonPath, nameof(request.TokenTypeJsonPath), required: false);
+            ValidateJsonPath(request.ExpiresAtJsonPath, nameof(request.ExpiresAtJsonPath), required: false);
+            ValidateJsonPath(request.ExpiresInJsonPath, nameof(request.ExpiresInJsonPath), required: false);
+        }
+        ValidateJsonObject(request.ConfigurationJson, nameof(request.ConfigurationJson));
+
+        var profile = version.AuthenticationProfile;
+        if (profile is null)
+        {
+            profile = new ApiAuthenticationProfile { ApiVersionId = versionId };
+            dbContext.ApiAuthenticationProfiles.Add(profile);
+        }
+
+        profile.Name = request.Name.Trim();
+        profile.Type = request.Type;
+        profile.TokenEndpointId = tokenEndpoint?.Id;
+        profile.TokenEndpoint = tokenEndpoint;
+        profile.TokenJsonPath = request.TokenJsonPath.Trim();
+        profile.TokenTypeJsonPath = NormalizeOptional(request.TokenTypeJsonPath);
+        profile.ExpiresAtJsonPath = NormalizeOptional(request.ExpiresAtJsonPath);
+        profile.ExpiresInJsonPath = NormalizeOptional(request.ExpiresInJsonPath);
+        profile.HeaderName = request.HeaderName.Trim();
+        profile.ConfigurationJson = NormalizeJson(request.ConfigurationJson);
+        profile.RefreshSkewSeconds = request.RefreshSkewSeconds;
+        profile.IsEnabled = request.IsEnabled;
+
+        if (tokenEndpoint is not null)
+            tokenEndpoint.AuthenticationMode = EndpointAuthenticationMode.Anonymous;
+        version.AuthenticationType = MapAuthenticationType(request.Type);
+
+        await dbContext.SaveChangesAsync(cancellationToken);
+        var environmentIds = await dbContext.ApiEnvironments.AsNoTracking()
+            .Where(x => x.ApiVersionId == versionId)
+            .Select(x => x.Id)
+            .ToListAsync(cancellationToken);
+        foreach (var environmentId in environmentIds)
+            authenticationResolver.Invalidate(profile.Id, environmentId);
+        return MapAuthenticationProfile(profile);
+    }
+
+    public async Task<AuthenticationProfileTestResponse> TestAuthenticationProfileAsync(
+        Guid apiId,
+        Guid versionId,
+        TestAuthenticationProfileRequest request,
+        CancellationToken cancellationToken)
+    {
+        var profile = await dbContext.ApiAuthenticationProfiles.AsNoTracking()
+            .Include(x => x.ApiVersion)
+            .Include(x => x.TokenEndpoint)
+            .SingleOrDefaultAsync(
+                x => x.ApiVersionId == versionId && x.ApiVersion.ApiAssetId == apiId,
+                cancellationToken)
+            ?? throw new NotFoundException("Authentication profile was not found.");
+
+        if (!profile.IsEnabled)
+            throw new RequestValidationException("Authentication profile is disabled.");
+
+        var environment = await dbContext.ApiEnvironments.AsNoTracking()
+            .Include(x => x.Secrets)
+            .SingleOrDefaultAsync(
+                x => x.Id == request.ApiEnvironmentId && x.ApiVersionId == versionId,
+                cancellationToken)
+            ?? throw new RequestValidationException("The selected environment does not belong to this API version.");
+
+        var secrets = environment.Secrets.ToDictionary(
+            x => x.Name,
+            x => secretProtector.Unprotect(x.EncryptedValue),
+            StringComparer.OrdinalIgnoreCase);
+        var authentication = await authenticationResolver.ResolveAsync(profile, environment, secrets, true, cancellationToken);
+
+        return new AuthenticationProfileTestResponse
+        {
+            IsSuccess = true,
+            Type = profile.Type,
+            Summary = authentication.Summary,
+            TokenType = authentication.TokenType,
+            ExpiresAtUtc = authentication.ExpiresAtUtc,
+            FromCache = authentication.FromCache
+        };
+    }
+
     public async Task<EndpointResponse> AddEndpointAsync(
         Guid apiId,
         Guid versionId,
@@ -274,6 +385,8 @@ public sealed class ApiCatalogService(IApplicationDbContext dbContext, ISecretPr
         var method = request.HttpMethod.Trim().ToUpperInvariant();
         if (!SupportedMethods.Contains(method))
             throw new RequestValidationException($"HTTP method '{method}' is not supported.");
+        if (!Enum.IsDefined(request.AuthenticationMode))
+            throw new RequestValidationException("AuthenticationMode is invalid.");
         if (Uri.TryCreate(request.RelativePath, UriKind.Absolute, out _))
             throw new RequestValidationException("RelativePath must not contain a scheme or host.");
 
@@ -297,7 +410,8 @@ public sealed class ApiCatalogService(IApplicationDbContext dbContext, ISecretPr
             ResponseHeadersSampleJson = request.ResponseHeadersSampleJson,
             ResponseBodySample = request.ResponseBodySample,
             SuccessStatusCodesJson = request.SuccessStatusCodesJson,
-            SoapAction = request.SoapAction?.Trim()
+            SoapAction = request.SoapAction?.Trim(),
+            AuthenticationMode = request.AuthenticationMode
         };
 
         dbContext.ApiEndpoints.Add(entity);
@@ -320,6 +434,11 @@ public sealed class ApiCatalogService(IApplicationDbContext dbContext, ISecretPr
         var method = request.HttpMethod.Trim().ToUpperInvariant();
         if (!SupportedMethods.Contains(method))
             throw new RequestValidationException($"HTTP method '{method}' is not supported.");
+        if (!Enum.IsDefined(request.AuthenticationMode))
+            throw new RequestValidationException("AuthenticationMode is invalid.");
+        if (request.AuthenticationMode != EndpointAuthenticationMode.Anonymous &&
+            await dbContext.ApiAuthenticationProfiles.AnyAsync(x => x.TokenEndpointId == endpointId, cancellationToken))
+            throw new RequestValidationException("The configured authentication endpoint must remain anonymous.");
         if (Uri.TryCreate(request.RelativePath, UriKind.Absolute, out _))
             throw new RequestValidationException("RelativePath must not contain a scheme or host.");
         ValidateJson(request.RequestHeadersJson, nameof(request.RequestHeadersJson));
@@ -340,6 +459,7 @@ public sealed class ApiCatalogService(IApplicationDbContext dbContext, ISecretPr
         entity.ResponseBodySample = request.ResponseBodySample;
         entity.SuccessStatusCodesJson = request.SuccessStatusCodesJson;
         entity.SoapAction = request.SoapAction?.Trim();
+        entity.AuthenticationMode = request.AuthenticationMode;
         await dbContext.SaveChangesAsync(cancellationToken);
         return MapEndpoint(entity);
     }
@@ -438,6 +558,11 @@ public sealed class ApiCatalogService(IApplicationDbContext dbContext, ISecretPr
         }
 
         await dbContext.SaveChangesAsync(cancellationToken);
+        var profileId = await dbContext.ApiAuthenticationProfiles.AsNoTracking()
+            .Where(x => x.ApiVersionId == versionId)
+            .Select(x => (Guid?)x.Id)
+            .SingleOrDefaultAsync(cancellationToken);
+        if (profileId.HasValue) authenticationResolver.Invalidate(profileId.Value, environmentId);
         return await GetEnvironmentAsync(environmentId, cancellationToken);
     }
 
@@ -445,6 +570,8 @@ public sealed class ApiCatalogService(IApplicationDbContext dbContext, ISecretPr
     {
         var entity = await dbContext.ApiVersions.AsNoTracking()
             .Include(x => x.Endpoints)
+            .Include(x => x.AuthenticationProfile)
+                .ThenInclude(x => x!.TokenEndpoint)
             .Include(x => x.Environments)
                 .ThenInclude(x => x.Secrets)
             .SingleOrDefaultAsync(x => x.Id == versionId, cancellationToken)
@@ -480,6 +607,59 @@ public sealed class ApiCatalogService(IApplicationDbContext dbContext, ISecretPr
         try { JsonDocument.Parse(value); }
         catch (JsonException ex) { throw new RequestValidationException($"{fieldName} must contain valid JSON: {ex.Message}"); }
     }
+
+    private static void ValidateJsonObject(string? value, string fieldName)
+    {
+        if (string.IsNullOrWhiteSpace(value)) return;
+        try
+        {
+            using var document = JsonDocument.Parse(value);
+            if (document.RootElement.ValueKind != JsonValueKind.Object)
+                throw new RequestValidationException($"{fieldName} must contain a JSON object.");
+        }
+        catch (JsonException ex)
+        {
+            throw new RequestValidationException($"{fieldName} must contain valid JSON: {ex.Message}");
+        }
+    }
+
+    private static string? NormalizeJson(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value)) return null;
+        using var document = JsonDocument.Parse(value);
+        return JsonSerializer.Serialize(document.RootElement);
+    }
+
+    private static bool UsesTokenEndpoint(AuthenticationProfileType type) =>
+        type is AuthenticationProfileType.TokenEndpoint or AuthenticationProfileType.OAuth2ClientCredentials;
+
+    private static AuthenticationType MapAuthenticationType(AuthenticationProfileType type) => type switch
+    {
+        AuthenticationProfileType.Basic => AuthenticationType.Basic,
+        AuthenticationProfileType.ApiKey => AuthenticationType.ApiKey,
+        AuthenticationProfileType.OAuth2ClientCredentials => AuthenticationType.OAuth2,
+        AuthenticationProfileType.MutualTls => AuthenticationType.MutualTls,
+        AuthenticationProfileType.CustomHeaders => AuthenticationType.Custom,
+        _ => AuthenticationType.Bearer
+    };
+
+    private static void ValidateJsonPath(string? value, string fieldName, bool required)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            if (required) throw new RequestValidationException($"{fieldName} is required.");
+            return;
+        }
+
+        var path = value.Trim();
+        if (!path.StartsWith("$.", StringComparison.Ordinal) ||
+            path.Length <= 2 ||
+            path[2..].Split('.').Any(string.IsNullOrWhiteSpace))
+            throw new RequestValidationException($"{fieldName} must be a simple JSON path such as $.accessToken.");
+    }
+
+    private static string? NormalizeOptional(string? value) =>
+        string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 
     private static bool IsValidTransition(ApiLifecycleStatus current, ApiLifecycleStatus next) =>
         current == next || (current, next) switch
@@ -548,6 +728,9 @@ public sealed class ApiCatalogService(IApplicationDbContext dbContext, ISecretPr
         MaxResponseBytes = entity.MaxResponseBytes,
         TimeoutSeconds = entity.TimeoutSeconds,
         IsCurrent = entity.IsCurrent,
+        AuthenticationProfile = entity.AuthenticationProfile is null
+            ? null
+            : MapAuthenticationProfile(entity.AuthenticationProfile),
         Consumers = entity.ProjectLinks.OrderBy(x => x.Project.Name).Select(x => new ApiVersionConsumerResponse
         {
             LinkId = x.Id,
@@ -575,7 +758,27 @@ public sealed class ApiCatalogService(IApplicationDbContext dbContext, ISecretPr
         ResponseHeadersSampleJson = entity.ResponseHeadersSampleJson,
         ResponseBodySample = entity.ResponseBodySample,
         SuccessStatusCodesJson = entity.SuccessStatusCodesJson,
-        SoapAction = entity.SoapAction
+        SoapAction = entity.SoapAction,
+        AuthenticationMode = entity.AuthenticationMode
+    };
+
+    private static AuthenticationProfileResponse MapAuthenticationProfile(ApiAuthenticationProfile entity) => new()
+    {
+        Id = entity.Id,
+        Name = entity.Name,
+        Type = entity.Type,
+        TokenEndpointId = entity.TokenEndpointId,
+        TokenEndpointName = entity.TokenEndpoint?.Name,
+        TokenEndpointMethod = entity.TokenEndpoint?.HttpMethod,
+        TokenEndpointPath = entity.TokenEndpoint?.RelativePath,
+        TokenJsonPath = entity.TokenJsonPath,
+        TokenTypeJsonPath = entity.TokenTypeJsonPath,
+        ExpiresAtJsonPath = entity.ExpiresAtJsonPath,
+        ExpiresInJsonPath = entity.ExpiresInJsonPath,
+        HeaderName = entity.HeaderName,
+        ConfigurationJson = entity.ConfigurationJson,
+        RefreshSkewSeconds = entity.RefreshSkewSeconds,
+        IsEnabled = entity.IsEnabled
     };
 
     private static EnvironmentResponse MapEnvironment(ApiEnvironment entity) => new()
