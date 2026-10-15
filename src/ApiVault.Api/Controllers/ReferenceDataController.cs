@@ -26,9 +26,41 @@ public sealed class ReferenceDataController(ReferenceDataService service) : Cont
         Ok(await service.CreateBusinessAreaAsync(request, cancellationToken));
 
     [Authorize(Roles = "Admin,SuperAdmin")]
+    [HttpPut("business-areas/{id:guid}")]
+    public async Task<ActionResult<LookupResponse>> UpdateBusinessArea(
+        Guid id,
+        CreateLookupRequest request,
+        CancellationToken cancellationToken) =>
+        Ok(await service.UpdateBusinessAreaAsync(id, request, cancellationToken));
+
+    [Authorize(Roles = "Admin,SuperAdmin")]
+    [HttpDelete("business-areas/{id:guid}")]
+    public async Task<IActionResult> DeleteBusinessArea(Guid id, CancellationToken cancellationToken)
+    {
+        await service.DeleteBusinessAreaAsync(id, cancellationToken);
+        return NoContent();
+    }
+
+    [Authorize(Roles = "Admin,SuperAdmin")]
     [HttpPost("development-teams")]
     public async Task<ActionResult<LookupResponse>> CreateDevelopmentTeam(
         CreateLookupRequest request,
         CancellationToken cancellationToken) =>
         Ok(await service.CreateDevelopmentTeamAsync(request, cancellationToken));
+
+    [Authorize(Roles = "Admin,SuperAdmin")]
+    [HttpPut("development-teams/{id:guid}")]
+    public async Task<ActionResult<LookupResponse>> UpdateDevelopmentTeam(
+        Guid id,
+        CreateLookupRequest request,
+        CancellationToken cancellationToken) =>
+        Ok(await service.UpdateDevelopmentTeamAsync(id, request, cancellationToken));
+
+    [Authorize(Roles = "Admin,SuperAdmin")]
+    [HttpDelete("development-teams/{id:guid}")]
+    public async Task<IActionResult> DeleteDevelopmentTeam(Guid id, CancellationToken cancellationToken)
+    {
+        await service.DeleteDevelopmentTeamAsync(id, cancellationToken);
+        return NoContent();
+    }
 }

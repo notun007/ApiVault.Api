@@ -40,9 +40,13 @@ public sealed class ApiTestExecutor(
             await ssrfGuard.ValidateAsync(uri, cancellationToken);
 
             var security = options.Value;
-            var maxRequestBytes = Math.Min(context.Version.MaxRequestBytes, security.AbsoluteMaxRequestBytes);
-            var maxResponseBytes = Math.Min(context.Version.MaxResponseBytes, security.AbsoluteMaxResponseBytes);
-            var requestedTimeout = context.Request.TimeoutSeconds ?? context.Version.TimeoutSeconds;
+            var requestedMaxRequestBytes = context.Endpoint.MaxRequestBytes ?? context.Version.MaxRequestBytes;
+            var requestedMaxResponseBytes = context.Endpoint.MaxResponseBytes ?? context.Version.MaxResponseBytes;
+            var maxRequestBytes = Math.Min(requestedMaxRequestBytes, security.AbsoluteMaxRequestBytes);
+            var maxResponseBytes = Math.Min(requestedMaxResponseBytes, security.AbsoluteMaxResponseBytes);
+            var requestedTimeout = context.Request.TimeoutSeconds ??
+                                   context.Endpoint.TimeoutSeconds ??
+                                   context.Version.TimeoutSeconds;
             var timeoutSeconds = Math.Min(requestedTimeout, security.AbsoluteMaxTimeoutSeconds);
 
             var requestSize = requestBody is null ? 0 : Encoding.UTF8.GetByteCount(requestBody);

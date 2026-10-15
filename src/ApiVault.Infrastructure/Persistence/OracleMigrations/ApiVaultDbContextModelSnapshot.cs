@@ -211,6 +211,12 @@ namespace ApiVault.Infrastructure.Persistence.OracleMigrations
                         .HasMaxLength(20)
                         .HasColumnType("NVARCHAR2(20)");
 
+                    b.Property<int?>("MaxRequestBytes")
+                        .HasColumnType("NUMBER(10)");
+
+                    b.Property<int?>("MaxResponseBytes")
+                        .HasColumnType("NUMBER(10)");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(200)
@@ -245,6 +251,9 @@ namespace ApiVault.Infrastructure.Persistence.OracleMigrations
 
                     b.Property<string>("SuccessStatusCodesJson")
                         .HasColumnType("NCLOB");
+
+                    b.Property<int?>("TimeoutSeconds")
+                        .HasColumnType("NUMBER(10)");
 
                     b.Property<DateTime?>("UpdatedAtUtc")
                         .HasColumnType("TIMESTAMP(6)");

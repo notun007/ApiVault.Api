@@ -80,8 +80,11 @@ public sealed class CreateApiVersionRequest
     public AuthenticationType AuthenticationType { get; set; }
     [MaxLength(8000)] public string? AuthenticationInstructions { get; set; }
     public string? AuthenticationConfigJson { get; set; }
+    /// <summary>Default maximum request size inherited by endpoints without an override.</summary>
     [Range(1, 50_000_000)] public int MaxRequestBytes { get; set; } = 1_048_576;
+    /// <summary>Default maximum response size inherited by endpoints without an override.</summary>
     [Range(1, 100_000_000)] public int MaxResponseBytes { get; set; } = 5_242_880;
+    /// <summary>Default timeout inherited by endpoints without an override.</summary>
     [Range(1, 300)] public int TimeoutSeconds { get; set; } = 30;
     public bool IsCurrent { get; set; } = true;
 }
@@ -96,8 +99,11 @@ public sealed class UpdateApiVersionRequest
     public AuthenticationType AuthenticationType { get; set; }
     [MaxLength(8000)] public string? AuthenticationInstructions { get; set; }
     public string? AuthenticationConfigJson { get; set; }
+    /// <summary>Default maximum request size inherited by endpoints without an override.</summary>
     [Range(1, 50_000_000)] public int MaxRequestBytes { get; set; } = 1_048_576;
+    /// <summary>Default maximum response size inherited by endpoints without an override.</summary>
     [Range(1, 100_000_000)] public int MaxResponseBytes { get; set; } = 5_242_880;
+    /// <summary>Default timeout inherited by endpoints without an override.</summary>
     [Range(1, 300)] public int TimeoutSeconds { get; set; } = 30;
     public bool IsCurrent { get; set; }
 }
@@ -155,6 +161,12 @@ public sealed class CreateEndpointRequest
     public string? SuccessStatusCodesJson { get; set; }
     [MaxLength(1000)] public string? SoapAction { get; set; }
     public EndpointAuthenticationMode AuthenticationMode { get; set; } = EndpointAuthenticationMode.Inherit;
+    /// <summary>Optional endpoint override; null inherits the API release default.</summary>
+    [Range(1, 50_000_000)] public int? MaxRequestBytes { get; set; }
+    /// <summary>Optional endpoint override; null inherits the API release default.</summary>
+    [Range(1, 100_000_000)] public int? MaxResponseBytes { get; set; }
+    /// <summary>Optional endpoint override; null inherits the API release default.</summary>
+    [Range(1, 300)] public int? TimeoutSeconds { get; set; }
 }
 
 public sealed class EndpointResponse
@@ -173,6 +185,9 @@ public sealed class EndpointResponse
     public string? SuccessStatusCodesJson { get; set; }
     public string? SoapAction { get; set; }
     public EndpointAuthenticationMode AuthenticationMode { get; set; }
+    public int? MaxRequestBytes { get; set; }
+    public int? MaxResponseBytes { get; set; }
+    public int? TimeoutSeconds { get; set; }
 }
 
 public sealed class UpsertAuthenticationProfileRequest
@@ -253,4 +268,8 @@ public sealed class LookupResponse
     public Guid Id { get; set; }
     public string Code { get; set; } = string.Empty;
     public string Name { get; set; } = string.Empty;
+    public string? Description { get; set; }
+    public string? ContactEmail { get; set; }
+    public int ReferenceCount { get; set; }
+    public bool CanDelete { get; set; }
 }

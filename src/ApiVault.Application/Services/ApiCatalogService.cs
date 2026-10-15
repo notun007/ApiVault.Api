@@ -411,7 +411,10 @@ public sealed class ApiCatalogService(
             ResponseBodySample = request.ResponseBodySample,
             SuccessStatusCodesJson = request.SuccessStatusCodesJson,
             SoapAction = request.SoapAction?.Trim(),
-            AuthenticationMode = request.AuthenticationMode
+            AuthenticationMode = request.AuthenticationMode,
+            MaxRequestBytes = request.MaxRequestBytes,
+            MaxResponseBytes = request.MaxResponseBytes,
+            TimeoutSeconds = request.TimeoutSeconds
         };
 
         dbContext.ApiEndpoints.Add(entity);
@@ -460,6 +463,9 @@ public sealed class ApiCatalogService(
         entity.SuccessStatusCodesJson = request.SuccessStatusCodesJson;
         entity.SoapAction = request.SoapAction?.Trim();
         entity.AuthenticationMode = request.AuthenticationMode;
+        entity.MaxRequestBytes = request.MaxRequestBytes;
+        entity.MaxResponseBytes = request.MaxResponseBytes;
+        entity.TimeoutSeconds = request.TimeoutSeconds;
         await dbContext.SaveChangesAsync(cancellationToken);
         return MapEndpoint(entity);
     }
@@ -759,7 +765,10 @@ public sealed class ApiCatalogService(
         ResponseBodySample = entity.ResponseBodySample,
         SuccessStatusCodesJson = entity.SuccessStatusCodesJson,
         SoapAction = entity.SoapAction,
-        AuthenticationMode = entity.AuthenticationMode
+        AuthenticationMode = entity.AuthenticationMode,
+        MaxRequestBytes = entity.MaxRequestBytes,
+        MaxResponseBytes = entity.MaxResponseBytes,
+        TimeoutSeconds = entity.TimeoutSeconds
     };
 
     private static AuthenticationProfileResponse MapAuthenticationProfile(ApiAuthenticationProfile entity) => new()

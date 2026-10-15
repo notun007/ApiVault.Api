@@ -267,6 +267,12 @@ public sealed class ApiEndpointConfiguration
             .HasMaxLength(30)
             .IsRequired();
 
+        b.Property(x => x.MaxRequestBytes);
+
+        b.Property(x => x.MaxResponseBytes);
+
+        b.Property(x => x.TimeoutSeconds);
+
         b.HasIndex(x => new
         {
             x.ApiVersionId,

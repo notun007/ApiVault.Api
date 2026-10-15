@@ -29,6 +29,21 @@ Project      1 --- * ProjectApiVersion * --- 1 ApiVersion
 ApiEndpoint  1 --- * TestExecution * --- 1 ApiEnvironment
 ```
 
+## API execution limits
+
+An API release defines the default maximum request size, maximum response size,
+and timeout for its endpoints. An endpoint can optionally override any of those
+defaults. A one-off test request can additionally override the timeout.
+
+The effective execution limits are resolved as follows and are always capped by
+the server's absolute security settings:
+
+```text
+request size  = endpoint override ?? release default
+response size = endpoint override ?? release default
+timeout       = test override ?? endpoint override ?? release default
+```
+
 `ProjectApiVersion` is deliberately linked to the exact release identity, not merely the API asset. This permits impact analysis when a release is deprecated or retired.
 
 ## Test-execution trust boundary

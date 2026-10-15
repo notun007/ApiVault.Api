@@ -102,9 +102,15 @@ public sealed class EndpointAuthenticationTokenProvider(
         }
 
         var security = options.Value;
-        var timeoutSeconds = Math.Min(profile.ApiVersion.TimeoutSeconds, security.AbsoluteMaxTimeoutSeconds);
-        var maxRequestBytes = Math.Min(profile.ApiVersion.MaxRequestBytes, security.AbsoluteMaxRequestBytes);
-        var maxResponseBytes = Math.Min(profile.ApiVersion.MaxResponseBytes, security.AbsoluteMaxResponseBytes);
+        var timeoutSeconds = Math.Min(
+            endpoint.TimeoutSeconds ?? profile.ApiVersion.TimeoutSeconds,
+            security.AbsoluteMaxTimeoutSeconds);
+        var maxRequestBytes = Math.Min(
+            endpoint.MaxRequestBytes ?? profile.ApiVersion.MaxRequestBytes,
+            security.AbsoluteMaxRequestBytes);
+        var maxResponseBytes = Math.Min(
+            endpoint.MaxResponseBytes ?? profile.ApiVersion.MaxResponseBytes,
+            security.AbsoluteMaxResponseBytes);
         if (body is not null && Encoding.UTF8.GetByteCount(body) > maxRequestBytes)
             throw new RequestValidationException("Authentication request exceeded the configured request-size limit.");
         using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);

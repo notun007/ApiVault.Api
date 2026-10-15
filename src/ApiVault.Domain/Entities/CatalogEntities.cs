@@ -101,6 +101,9 @@ public sealed class ApiEndpoint : AuditableEntity
     public string? SuccessStatusCodesJson { get; set; }
     public string? SoapAction { get; set; }
     public EndpointAuthenticationMode AuthenticationMode { get; set; } = EndpointAuthenticationMode.Inherit;
+    public int? MaxRequestBytes { get; set; }
+    public int? MaxResponseBytes { get; set; }
+    public int? TimeoutSeconds { get; set; }
     public ICollection<TestExecution> TestExecutions { get; set; } = new List<TestExecution>();
 }
 
