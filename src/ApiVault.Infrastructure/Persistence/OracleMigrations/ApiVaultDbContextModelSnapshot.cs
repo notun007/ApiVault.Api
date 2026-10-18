@@ -52,9 +52,6 @@ namespace ApiVault.Infrastructure.Persistence.OracleMigrations
                         .HasMaxLength(4000)
                         .HasColumnType("NCLOB");
 
-                    b.Property<Guid>("DevelopmentTeamId")
-                        .HasColumnType("RAW(16)");
-
                     b.Property<string>("ExternalReferenceUrl")
                         .HasMaxLength(1000)
                         .HasColumnType("NVARCHAR2(1000)");
@@ -91,8 +88,6 @@ namespace ApiVault.Infrastructure.Persistence.OracleMigrations
                     b.HasKey("Id");
 
                     b.HasIndex("BusinessAreaId");
-
-                    b.HasIndex("DevelopmentTeamId");
 
                     b.HasIndex("PublishingApplicationId");
 
@@ -588,53 +583,6 @@ namespace ApiVault.Infrastructure.Persistence.OracleMigrations
                     b.ToTable("BUSINESS_AREA", (string)null);
                 });
 
-            modelBuilder.Entity("ApiVault.Domain.Entities.DevelopmentTeam", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("RAW(16)");
-
-                    b.Property<string>("Code")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("NVARCHAR2(50)");
-
-                    b.Property<string>("ContactEmail")
-                        .HasMaxLength(320)
-                        .HasColumnType("NVARCHAR2(320)");
-
-                    b.Property<DateTime>("CreatedAtUtc")
-                        .HasColumnType("TIMESTAMP(6)");
-
-                    b.Property<string>("CreatedBy")
-                        .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("NVARCHAR2(200)");
-
-                    b.Property<string>("Description")
-                        .HasMaxLength(4000)
-                        .HasColumnType("NCLOB");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("NVARCHAR2(200)");
-
-                    b.Property<DateTime?>("UpdatedAtUtc")
-                        .HasColumnType("TIMESTAMP(6)");
-
-                    b.Property<string>("UpdatedBy")
-                        .HasMaxLength(200)
-                        .HasColumnType("NVARCHAR2(200)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("Code")
-                        .IsUnique();
-
-                    b.ToTable("DEV_TEAM", (string)null);
-                });
-
             modelBuilder.Entity("ApiVault.Domain.Entities.EnvironmentSecret", b =>
                 {
                     b.Property<Guid>("Id")
@@ -712,9 +660,6 @@ namespace ApiVault.Infrastructure.Persistence.OracleMigrations
                         .HasMaxLength(200)
                         .HasColumnType("NVARCHAR2(200)");
 
-                    b.Property<Guid?>("OwnerTeamId")
-                        .HasColumnType("RAW(16)");
-
                     b.Property<string>("OwnershipType")
                         .IsRequired()
                         .HasMaxLength(30)
@@ -741,8 +686,6 @@ namespace ApiVault.Infrastructure.Persistence.OracleMigrations
 
                     b.HasIndex("Code")
                         .IsUnique();
-
-                    b.HasIndex("OwnerTeamId");
 
                     b.HasIndex("VendorId");
 
@@ -1077,6 +1020,55 @@ namespace ApiVault.Infrastructure.Persistence.OracleMigrations
                     b.ToTable("TEST_EXECUTION", (string)null);
                 });
 
+            modelBuilder.Entity("ApiVault.Domain.Entities.UserApiAccessAction", b =>
+                {
+                    b.Property<Guid>("GrantId").HasColumnType("RAW(16)");
+                    b.Property<string>("ActionCode").HasMaxLength(30).HasColumnType("NVARCHAR2(30)");
+                    b.HasKey("GrantId", "ActionCode");
+                    b.ToTable("USER_API_ACCESS_ACTION", (string)null);
+                });
+
+            modelBuilder.Entity("ApiVault.Domain.Entities.UserApiAccessAudit", b =>
+                {
+                    b.Property<Guid>("Id").ValueGeneratedOnAdd().HasColumnType("RAW(16)");
+                    b.Property<string>("ActionType").IsRequired().HasMaxLength(30).HasColumnType("NVARCHAR2(30)");
+                    b.Property<DateTime>("CreatedAtUtc").HasColumnType("TIMESTAMP(6)");
+                    b.Property<string>("CreatedBy").IsRequired().HasMaxLength(200).HasColumnType("NVARCHAR2(200)");
+                    b.Property<Guid?>("GrantId").HasColumnType("RAW(16)");
+                    b.Property<string>("NewValueJson").HasColumnType("NCLOB");
+                    b.Property<string>("OldValueJson").HasColumnType("NCLOB");
+                    b.Property<DateTime?>("UpdatedAtUtc").HasColumnType("TIMESTAMP(6)");
+                    b.Property<string>("UpdatedBy").HasMaxLength(200).HasColumnType("NVARCHAR2(200)");
+                    b.Property<Guid>("UserId").HasColumnType("RAW(16)");
+                    b.HasKey("Id");
+                    b.HasIndex("GrantId");
+                    b.HasIndex("UserId", "CreatedAtUtc");
+                    b.ToTable("USER_API_ACCESS_AUDIT", (string)null);
+                });
+
+            modelBuilder.Entity("ApiVault.Domain.Entities.UserApiAccessGrant", b =>
+                {
+                    b.Property<Guid>("Id").ValueGeneratedOnAdd().HasColumnType("RAW(16)");
+                    b.Property<Guid>("ApiEndpointId").HasColumnType("RAW(16)");
+                    b.Property<Guid>("ApiEnvironmentId").HasColumnType("RAW(16)");
+                    b.Property<Guid>("ApplicationId").HasColumnType("RAW(16)");
+                    b.Property<DateTime>("CreatedAtUtc").HasColumnType("TIMESTAMP(6)");
+                    b.Property<string>("CreatedBy").IsRequired().HasMaxLength(200).HasColumnType("NVARCHAR2(200)");
+                    b.Property<bool>("IsActive").HasColumnType("NUMBER(1)");
+                    b.Property<DateTime?>("UpdatedAtUtc").HasColumnType("TIMESTAMP(6)");
+                    b.Property<string>("UpdatedBy").HasMaxLength(200).HasColumnType("NVARCHAR2(200)");
+                    b.Property<Guid>("UserId").HasColumnType("RAW(16)");
+                    b.Property<DateTime?>("ValidFromUtc").HasColumnType("TIMESTAMP(7)");
+                    b.Property<DateTime?>("ValidToUtc").HasColumnType("TIMESTAMP(7)");
+                    b.HasKey("Id");
+                    b.HasIndex("ApiEndpointId");
+                    b.HasIndex("ApiEnvironmentId");
+                    b.HasIndex("ApplicationId");
+                    b.HasIndex("UserId", "ApplicationId");
+                    b.HasIndex("UserId", "ApplicationId", "ApiEndpointId", "ApiEnvironmentId").IsUnique();
+                    b.ToTable("USER_API_ACCESS", (string)null);
+                });
+
             modelBuilder.Entity("ApiVault.Domain.Entities.Vendor", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1150,12 +1142,6 @@ namespace ApiVault.Infrastructure.Persistence.OracleMigrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.HasOne("ApiVault.Domain.Entities.DevelopmentTeam", "DevelopmentTeam")
-                        .WithMany("Apis")
-                        .HasForeignKey("DevelopmentTeamId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
                     b.HasOne("ApiVault.Domain.Entities.Project", "PublishingApplication")
                         .WithMany("PublishedApis")
                         .HasForeignKey("PublishingApplicationId")
@@ -1163,8 +1149,6 @@ namespace ApiVault.Infrastructure.Persistence.OracleMigrations
                         .IsRequired();
 
                     b.Navigation("BusinessArea");
-
-                    b.Navigation("DevelopmentTeam");
 
                     b.Navigation("PublishingApplication");
                 });
@@ -1257,19 +1241,12 @@ namespace ApiVault.Infrastructure.Persistence.OracleMigrations
                         .HasForeignKey("BusinessAreaId")
                         .OnDelete(DeleteBehavior.Restrict);
 
-                    b.HasOne("ApiVault.Domain.Entities.DevelopmentTeam", "OwnerTeam")
-                        .WithMany("Projects")
-                        .HasForeignKey("OwnerTeamId")
-                        .OnDelete(DeleteBehavior.Restrict);
-
                     b.HasOne("ApiVault.Domain.Entities.Vendor", "Vendor")
                         .WithMany("Systems")
                         .HasForeignKey("VendorId")
                         .OnDelete(DeleteBehavior.Restrict);
 
                     b.Navigation("BusinessArea");
-
-                    b.Navigation("OwnerTeam");
 
                     b.Navigation("Vendor");
                 });
@@ -1349,6 +1326,28 @@ namespace ApiVault.Infrastructure.Persistence.OracleMigrations
                     b.Navigation("ApiEnvironment");
                 });
 
+            modelBuilder.Entity("ApiVault.Domain.Entities.UserApiAccessAction", b =>
+                {
+                    b.HasOne("ApiVault.Domain.Entities.UserApiAccessGrant", "Grant")
+                        .WithMany("Actions")
+                        .HasForeignKey("GrantId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                    b.Navigation("Grant");
+                });
+
+            modelBuilder.Entity("ApiVault.Domain.Entities.UserApiAccessGrant", b =>
+                {
+                    b.HasOne("ApiVault.Domain.Entities.ApiEndpoint", "ApiEndpoint").WithMany().HasForeignKey("ApiEndpointId").OnDelete(DeleteBehavior.Restrict).IsRequired();
+                    b.HasOne("ApiVault.Domain.Entities.ApiEnvironment", "ApiEnvironment").WithMany().HasForeignKey("ApiEnvironmentId").OnDelete(DeleteBehavior.Restrict).IsRequired();
+                    b.HasOne("ApiVault.Domain.Entities.Project", "Application").WithMany().HasForeignKey("ApplicationId").OnDelete(DeleteBehavior.Restrict).IsRequired();
+                    b.HasOne("ApiVault.Domain.Entities.AppUser", "User").WithMany().HasForeignKey("UserId").OnDelete(DeleteBehavior.Restrict).IsRequired();
+                    b.Navigation("ApiEndpoint");
+                    b.Navigation("ApiEnvironment");
+                    b.Navigation("Application");
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("ApiVault.Domain.Entities.ApiAsset", b =>
                 {
                     b.Navigation("Versions");
@@ -1389,13 +1388,6 @@ namespace ApiVault.Infrastructure.Persistence.OracleMigrations
                     b.Navigation("Projects");
                 });
 
-            modelBuilder.Entity("ApiVault.Domain.Entities.DevelopmentTeam", b =>
-                {
-                    b.Navigation("Apis");
-
-                    b.Navigation("Projects");
-                });
-
             modelBuilder.Entity("ApiVault.Domain.Entities.Project", b =>
                 {
                     b.Navigation("ApiLinks");
@@ -1420,6 +1412,11 @@ namespace ApiVault.Infrastructure.Persistence.OracleMigrations
                     b.Navigation("Children");
 
                     b.Navigation("RolePermissions");
+                });
+
+            modelBuilder.Entity("ApiVault.Domain.Entities.UserApiAccessGrant", b =>
+                {
+                    b.Navigation("Actions");
                 });
 
             modelBuilder.Entity("ApiVault.Domain.Entities.Vendor", b =>

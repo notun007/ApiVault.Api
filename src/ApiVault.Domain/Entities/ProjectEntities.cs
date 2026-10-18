@@ -12,8 +12,6 @@ public sealed class Project : AuditableEntity
     public ProjectStatus Status { get; set; } = ProjectStatus.Active;
     public Guid? BusinessAreaId { get; set; }
     public BusinessArea? BusinessArea { get; set; }
-    public Guid? OwnerTeamId { get; set; }
-    public DevelopmentTeam? OwnerTeam { get; set; }
     public ApiOwnershipType OwnershipType { get; set; } = ApiOwnershipType.Internal;
     public Guid? VendorId { get; set; }
     public Vendor? Vendor { get; set; }

@@ -11,7 +11,6 @@ public sealed class CreateProjectRequest
     public ProjectCriticality Criticality { get; set; } = ProjectCriticality.Medium;
     public ProjectStatus Status { get; set; } = ProjectStatus.Active;
     [Required] public Guid BusinessAreaId { get; set; }
-    [Required] public Guid OwnerTeamId { get; set; }
     [Required] public ApiOwnershipType OwnershipType { get; set; }
     public Guid? VendorId { get; set; }
 }
@@ -32,9 +31,7 @@ public class ProjectSummaryResponse
     public ProjectCriticality Criticality { get; set; }
     public ProjectStatus Status { get; set; }
     public string BusinessArea { get; set; } = string.Empty;
-    public string OwnerTeam { get; set; } = string.Empty;
     public Guid? BusinessAreaId { get; set; }
-    public Guid? OwnerTeamId { get; set; }
     public ApiOwnershipType OwnershipType { get; set; }
     public Guid? VendorId { get; set; }
     public string? VendorName { get; set; }

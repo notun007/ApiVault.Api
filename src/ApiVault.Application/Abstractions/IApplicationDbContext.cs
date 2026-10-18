@@ -6,7 +6,6 @@ namespace ApiVault.Application.Abstractions;
 public interface IApplicationDbContext
 {
     DbSet<BusinessArea> BusinessAreas { get; }
-    DbSet<DevelopmentTeam> DevelopmentTeams { get; }
     DbSet<ApiAsset> ApiAssets { get; }
     DbSet<ApiVersion> ApiVersions { get; }
     DbSet<ApiEndpoint> ApiEndpoints { get; }
@@ -22,6 +21,9 @@ public interface IApplicationDbContext
     DbSet<SecurityScreen> SecurityScreens { get; }
     DbSet<AppUserRole> AppUserRoles { get; }
     DbSet<RolePermission> RolePermissions { get; }
+    DbSet<UserApiAccessGrant> UserApiAccessGrants { get; }
+    DbSet<UserApiAccessAction> UserApiAccessActions { get; }
+    DbSet<UserApiAccessAudit> UserApiAccessAudits { get; }
     DbSet<TestExecution> TestExecutions { get; }
     DbSet<AuditLog> AuditLogs { get; }
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);

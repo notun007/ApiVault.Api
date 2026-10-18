@@ -66,6 +66,42 @@ public sealed class RolePermission : AuditableEntity
     public SecurityPermission Permission { get; set; } = null!;
 }
 
+public sealed class UserApiAccessGrant : AuditableEntity
+{
+    public Guid UserId { get; set; }
+    public AppUser User { get; set; } = null!;
+    public Guid ApplicationId { get; set; }
+    public Project Application { get; set; } = null!;
+    public Guid ApiEndpointId { get; set; }
+    public ApiEndpoint ApiEndpoint { get; set; } = null!;
+    public Guid ApiEnvironmentId { get; set; }
+    public ApiEnvironment ApiEnvironment { get; set; } = null!;
+    public bool IsActive { get; set; } = true;
+    public DateTime? ValidFromUtc { get; set; }
+    public DateTime? ValidToUtc { get; set; }
+    public ICollection<UserApiAccessAction> Actions { get; set; } = new List<UserApiAccessAction>();
+}
+
+public sealed class UserApiAccessAction
+{
+    public const string Read = "READ";
+    public const string Create = "CREATE";
+    public const string Edit = "EDIT";
+
+    public Guid GrantId { get; set; }
+    public UserApiAccessGrant Grant { get; set; } = null!;
+    public string ActionCode { get; set; } = string.Empty;
+}
+
+public sealed class UserApiAccessAudit : AuditableEntity
+{
+    public Guid? GrantId { get; set; }
+    public Guid UserId { get; set; }
+    public string ActionType { get; set; } = string.Empty;
+    public string? OldValueJson { get; set; }
+    public string? NewValueJson { get; set; }
+}
+
 public sealed class TestExecution : AuditableEntity
 {
     public Guid ApiEndpointId { get; set; }

@@ -20,7 +20,6 @@ public sealed class ApiSearchQuery
     public ApiProtocol? Protocol { get; set; }
     public ApiLifecycleStatus? LifecycleStatus { get; set; }
     public Guid? BusinessAreaId { get; set; }
-    public Guid? DevelopmentTeamId { get; set; }
     public Guid? PublishingApplicationId { get; set; }
     public ApiCatalogSortField SortBy { get; set; } = ApiCatalogSortField.Name;
     public bool SortDescending { get; set; }
@@ -46,7 +45,6 @@ public sealed class ApiSummaryResponse
     public ApiOwnershipType OwnershipType { get; set; }
     public ApiProtocol Protocol { get; set; }
     public string BusinessArea { get; set; } = string.Empty;
-    public string DevelopmentTeam { get; set; } = string.Empty;
     public string? CurrentVersion { get; set; }
     public ApiLifecycleStatus? CurrentLifecycleStatus { get; set; }
     public int VersionCount { get; set; }
@@ -66,7 +64,6 @@ public sealed class ApiDetailResponse
     public string? VendorName { get; set; }
     public string? ExternalReferenceUrl { get; set; }
     public LookupResponse BusinessArea { get; set; } = new();
-    public LookupResponse DevelopmentTeam { get; set; } = new();
     public IReadOnlyList<ApiVersionResponse> Versions { get; set; } = Array.Empty<ApiVersionResponse>();
 }
 
@@ -269,7 +266,6 @@ public sealed class LookupResponse
     public string Code { get; set; } = string.Empty;
     public string Name { get; set; } = string.Empty;
     public string? Description { get; set; }
-    public string? ContactEmail { get; set; }
     public int ReferenceCount { get; set; }
     public bool CanDelete { get; set; }
 }

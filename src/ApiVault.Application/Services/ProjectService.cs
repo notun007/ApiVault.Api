@@ -24,8 +24,6 @@ public sealed class ProjectService(IApplicationDbContext dbContext)
             Status = x.Status,
             BusinessAreaId = x.BusinessAreaId,
             BusinessArea = x.BusinessArea == null ? "Unassigned" : x.BusinessArea.Name,
-            OwnerTeamId = x.OwnerTeamId,
-            OwnerTeam = x.OwnerTeam == null ? "Unassigned" : x.OwnerTeam.Name,
             OwnershipType = x.OwnershipType,
             VendorId = x.VendorId,
             VendorName = x.Vendor == null ? null : x.Vendor.Name,
@@ -38,7 +36,6 @@ public sealed class ProjectService(IApplicationDbContext dbContext)
     {
         var entity = await dbContext.Projects.AsNoTracking()
             .Include(x => x.BusinessArea)
-            .Include(x => x.OwnerTeam)
             .Include(x => x.Vendor)
             .Include(x => x.ApiLinks).ThenInclude(x => x.ApiVersion).ThenInclude(x => x.ApiAsset)
             .Include(x => x.PublishedApis).ThenInclude(x => x.Versions)
@@ -102,8 +99,6 @@ public sealed class ProjectService(IApplicationDbContext dbContext)
             throw new ConflictException("An application or system with the same code or name already exists.");
         if (!await dbContext.BusinessAreas.AnyAsync(x => x.Id == request.BusinessAreaId, cancellationToken))
             throw new RequestValidationException("Business area does not exist.");
-        if (!await dbContext.DevelopmentTeams.AnyAsync(x => x.Id == request.OwnerTeamId, cancellationToken))
-            throw new RequestValidationException("Owner team does not exist.");
         if (request.OwnershipType == ApiOwnershipType.ThirdParty)
         {
             if (!request.VendorId.HasValue)
@@ -121,7 +116,6 @@ public sealed class ProjectService(IApplicationDbContext dbContext)
         entity.Criticality = request.Criticality;
         entity.Status = request.Status;
         entity.BusinessAreaId = request.BusinessAreaId;
-        entity.OwnerTeamId = request.OwnerTeamId;
         entity.OwnershipType = request.OwnershipType;
         entity.VendorId = request.OwnershipType == ApiOwnershipType.ThirdParty ? request.VendorId : null;
     }
@@ -136,8 +130,6 @@ public sealed class ProjectService(IApplicationDbContext dbContext)
         Status = entity.Status,
         BusinessAreaId = entity.BusinessAreaId,
         BusinessArea = entity.BusinessArea?.Name ?? "Unassigned",
-        OwnerTeamId = entity.OwnerTeamId,
-        OwnerTeam = entity.OwnerTeam?.Name ?? "Unassigned",
         OwnershipType = entity.OwnershipType,
         VendorId = entity.VendorId,
         VendorName = entity.Vendor?.Name,

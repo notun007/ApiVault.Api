@@ -56,34 +56,6 @@ public sealed class BusinessAreaConfiguration
     }
 }
 
-public sealed class DevelopmentTeamConfiguration
-    : IEntityTypeConfiguration<DevelopmentTeam>
-{
-    public void Configure(EntityTypeBuilder<DevelopmentTeam> b)
-    {
-        b.ToTable("DEV_TEAM");
-
-        ConfigurationHelpers.ConfigureAudit(b);
-
-        b.Property(x => x.Code)
-            .HasMaxLength(50)
-            .IsRequired();
-
-        b.Property(x => x.Name)
-            .HasMaxLength(200)
-            .IsRequired();
-
-        b.Property(x => x.ContactEmail)
-            .HasMaxLength(320);
-
-        b.Property(x => x.Description)
-            .HasMaxLength(4000);
-
-        b.HasIndex(x => x.Code)
-            .IsUnique();
-    }
-}
-
 public sealed class ApiAssetConfiguration
     : IEntityTypeConfiguration<ApiAsset>
 {
@@ -128,9 +100,6 @@ public sealed class ApiAssetConfiguration
         b.Property(x => x.BusinessAreaId)
             .HasColumnType("RAW(16)");
 
-        b.Property(x => x.DevelopmentTeamId)
-            .HasColumnType("RAW(16)");
-
         b.HasIndex(x => new { x.Name, x.PublishingApplicationId })
             .IsUnique();
 
@@ -144,10 +113,6 @@ public sealed class ApiAssetConfiguration
             .HasForeignKey(x => x.BusinessAreaId)
             .OnDelete(DeleteBehavior.Restrict);
 
-        b.HasOne(x => x.DevelopmentTeam)
-            .WithMany(x => x.Apis)
-            .HasForeignKey(x => x.DevelopmentTeamId)
-            .OnDelete(DeleteBehavior.Restrict);
     }
 }
 
@@ -427,9 +392,6 @@ public sealed class ProjectConfiguration
         b.Property(x => x.BusinessAreaId)
             .HasColumnType("RAW(16)");
 
-        b.Property(x => x.OwnerTeamId)
-            .HasColumnType("RAW(16)");
-
         b.Property(x => x.OwnershipType)
             .HasConversion<string>()
             .HasMaxLength(30)
@@ -444,11 +406,6 @@ public sealed class ProjectConfiguration
         b.HasOne(x => x.BusinessArea)
             .WithMany(x => x.Projects)
             .HasForeignKey(x => x.BusinessAreaId)
-            .OnDelete(DeleteBehavior.Restrict);
-
-        b.HasOne(x => x.OwnerTeam)
-            .WithMany(x => x.Projects)
-            .HasForeignKey(x => x.OwnerTeamId)
             .OnDelete(DeleteBehavior.Restrict);
 
         b.HasOne(x => x.Vendor)
@@ -709,19 +666,6 @@ public sealed class AuditLogConfiguration
 //    }
 //}
 
-//public sealed class DevelopmentTeamConfiguration : IEntityTypeConfiguration<DevelopmentTeam>
-//{
-//    public void Configure(EntityTypeBuilder<DevelopmentTeam> b)
-//    {
-//        b.ToTable("DEV_TEAM"); ConfigurationHelpers.ConfigureAudit(b);
-//        b.Property(x => x.Code).HasMaxLength(50).IsRequired();
-//        b.Property(x => x.Name).HasMaxLength(200).IsRequired();
-//        b.Property(x => x.ContactEmail).HasMaxLength(320);
-//        b.Property(x => x.Description).HasMaxLength(4000);
-//        b.HasIndex(x => x.Code).IsUnique();
-//    }
-//}
-
 //public sealed class ApiProjectConfiguration : IEntityTypeConfiguration<ApiProject>
 //{
 //    public void Configure(EntityTypeBuilder<ApiProject> b)
@@ -752,10 +696,8 @@ public sealed class AuditLogConfiguration
 //        b.Property(x => x.VendorName).HasMaxLength(200);
 //        b.Property(x => x.ExternalReferenceUrl).HasMaxLength(1000);
 //        b.Property(x => x.BusinessAreaId).HasColumnType("RAW(16)");
-//        b.Property(x => x.DevelopmentTeamId).HasColumnType("RAW(16)");
 //        b.HasIndex(x => new { x.Name, x.ApiProjectName }).IsUnique();
 //        b.HasOne(x => x.BusinessArea).WithMany(x => x.Apis).HasForeignKey(x => x.BusinessAreaId).OnDelete(DeleteBehavior.Restrict);
-//        b.HasOne(x => x.DevelopmentTeam).WithMany(x => x.Apis).HasForeignKey(x => x.DevelopmentTeamId).OnDelete(DeleteBehavior.Restrict);
 //    }
 //}
 
@@ -843,10 +785,8 @@ public sealed class AuditLogConfiguration
 //        b.Property(x => x.Criticality).HasConversion<string>().HasMaxLength(30).IsRequired();
 //        b.Property(x => x.Status).HasConversion<string>().HasMaxLength(30).IsRequired();
 //        b.Property(x => x.BusinessAreaId).HasColumnType("RAW(16)");
-//        b.Property(x => x.OwnerTeamId).HasColumnType("RAW(16)");
 //        b.HasIndex(x => x.Code).IsUnique();
 //        b.HasOne(x => x.BusinessArea).WithMany(x => x.Projects).HasForeignKey(x => x.BusinessAreaId).OnDelete(DeleteBehavior.Restrict);
-//        b.HasOne(x => x.OwnerTeam).WithMany(x => x.Projects).HasForeignKey(x => x.OwnerTeamId).OnDelete(DeleteBehavior.Restrict);
 //    }
 //}
 

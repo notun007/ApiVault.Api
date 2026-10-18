@@ -39,9 +39,6 @@ public sealed class DatabaseSeeder(
                 new BusinessArea { Code = "HR", Name = "Human Resources" });
         }
 
-        if (options.Value.SeedBusinessReferenceData && !await dbContext.DevelopmentTeams.AnyAsync(cancellationToken))
-            dbContext.DevelopmentTeams.Add(new DevelopmentTeam { Code = "PLATFORM", Name = "Platform Engineering" });
-
         await dbContext.SaveChangesAsync(cancellationToken);
         await SeedSecurityReferenceDataAsync(cancellationToken);
     }
@@ -75,8 +72,10 @@ public sealed class DatabaseSeeder(
             ("TEST_HISTORY", "Test History", "/admin/test-history", "HS", 50), ("REFERENCE_DATA", "Reference Data", "/admin/reference-data", "RF", 60),
             ("VENDORS", "Vendor Companies", "/admin/vendors", "VN", 75), ("USERS", "Users", "/admin/users", "US", 80),
             ("RESET_PASSWORD", "Reset Password", "/admin/reset-password", "PW", 85),
-            ("AUDIT_LOGS", "Audit Logs", "/admin/audit-logs", "AU", 90), ("SECURITY_ROLES", "Roles", "/admin/security/roles", "RL", 100),
-            ("SECURITY_PERMISSIONS", "Permissions", "/admin/security/permissions", "PM", 110)
+            ("USER_ROLES", "User Roles", "/admin/security/user-access", "UR", 90),
+            ("API_ACCESS", "API Access", "/admin/security/api-access", "AA", 95),
+            ("AUDIT_LOGS", "Audit Logs", "/admin/audit-logs", "AU", 100), ("SECURITY_ROLES", "Roles", "/admin/security/roles", "RL", 110),
+            ("SECURITY_PERMISSIONS", "Permissions", "/admin/security/permissions", "PM", 120)
         };
         foreach (var (code, name, route, icon, order) in screens)
             if (!await dbContext.SecurityScreens.AnyAsync(x => x.Code == code, cancellationToken))

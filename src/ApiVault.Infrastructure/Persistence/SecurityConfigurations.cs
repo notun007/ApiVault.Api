@@ -76,3 +76,54 @@ public sealed class RolePermissionConfiguration : IEntityTypeConfiguration<RoleP
             .HasForeignKey(x => x.PermissionId).OnDelete(DeleteBehavior.Restrict);
     }
 }
+
+public sealed class UserApiAccessGrantConfiguration : IEntityTypeConfiguration<UserApiAccessGrant>
+{
+    public void Configure(EntityTypeBuilder<UserApiAccessGrant> b)
+    {
+        b.ToTable("USER_API_ACCESS");
+        ConfigurationHelpers.ConfigureAudit(b);
+        b.Property(x => x.UserId).HasColumnType("RAW(16)");
+        b.Property(x => x.ApplicationId).HasColumnType("RAW(16)");
+        b.Property(x => x.ApiEndpointId).HasColumnType("RAW(16)");
+        b.Property(x => x.ApiEnvironmentId).HasColumnType("RAW(16)");
+        b.Property(x => x.IsActive).HasColumnType("NUMBER(1)");
+
+        b.HasIndex(x => new { x.UserId, x.ApplicationId, x.ApiEndpointId, x.ApiEnvironmentId }).IsUnique();
+        b.HasIndex(x => new { x.UserId, x.ApplicationId });
+
+        b.HasOne(x => x.User).WithMany().HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Restrict);
+        b.HasOne(x => x.Application).WithMany().HasForeignKey(x => x.ApplicationId).OnDelete(DeleteBehavior.Restrict);
+        b.HasOne(x => x.ApiEndpoint).WithMany().HasForeignKey(x => x.ApiEndpointId).OnDelete(DeleteBehavior.Restrict);
+        b.HasOne(x => x.ApiEnvironment).WithMany().HasForeignKey(x => x.ApiEnvironmentId).OnDelete(DeleteBehavior.Restrict);
+    }
+}
+
+public sealed class UserApiAccessActionConfiguration : IEntityTypeConfiguration<UserApiAccessAction>
+{
+    public void Configure(EntityTypeBuilder<UserApiAccessAction> b)
+    {
+        b.ToTable("USER_API_ACCESS_ACTION");
+        b.HasKey(x => new { x.GrantId, x.ActionCode });
+        b.Property(x => x.GrantId).HasColumnType("RAW(16)");
+        b.Property(x => x.ActionCode).HasMaxLength(30).IsRequired();
+        b.HasOne(x => x.Grant).WithMany(x => x.Actions)
+            .HasForeignKey(x => x.GrantId).OnDelete(DeleteBehavior.Cascade);
+    }
+}
+
+public sealed class UserApiAccessAuditConfiguration : IEntityTypeConfiguration<UserApiAccessAudit>
+{
+    public void Configure(EntityTypeBuilder<UserApiAccessAudit> b)
+    {
+        b.ToTable("USER_API_ACCESS_AUDIT");
+        ConfigurationHelpers.ConfigureAudit(b);
+        b.Property(x => x.GrantId).HasColumnType("RAW(16)");
+        b.Property(x => x.UserId).HasColumnType("RAW(16)");
+        b.Property(x => x.ActionType).HasMaxLength(30).IsRequired();
+        b.Property(x => x.OldValueJson).HasColumnType("NCLOB");
+        b.Property(x => x.NewValueJson).HasColumnType("NCLOB");
+        b.HasIndex(x => new { x.UserId, x.CreatedAtUtc });
+        b.HasIndex(x => x.GrantId);
+    }
+}

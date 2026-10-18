@@ -12,16 +12,6 @@ public sealed class BusinessArea : AuditableEntity
     public ICollection<Project> Projects { get; set; } = new List<Project>();
 }
 
-public sealed class DevelopmentTeam : AuditableEntity
-{
-    public string Code { get; set; } = string.Empty;
-    public string Name { get; set; } = string.Empty;
-    public string? ContactEmail { get; set; }
-    public string? Description { get; set; }
-    public ICollection<ApiAsset> Apis { get; set; } = new List<ApiAsset>();
-    public ICollection<Project> Projects { get; set; } = new List<Project>();
-}
-
 //New
 public sealed class ApiAsset : AuditableEntity
 {
@@ -37,8 +27,6 @@ public sealed class ApiAsset : AuditableEntity
     public string? ExternalReferenceUrl { get; set; }
     public Guid BusinessAreaId { get; set; }
     public BusinessArea BusinessArea { get; set; } = null!;
-    public Guid DevelopmentTeamId { get; set; }
-    public DevelopmentTeam DevelopmentTeam { get; set; } = null!;
     public ICollection<ApiVersion> Versions { get; set; } = new List<ApiVersion>();
 }
 //Commented on 26-07-2026
@@ -55,8 +43,6 @@ public sealed class ApiAsset : AuditableEntity
 //    public string? ExternalReferenceUrl { get; set; }
 //    public Guid BusinessAreaId { get; set; }
 //    public BusinessArea BusinessArea { get; set; } = null!;
-//    public Guid DevelopmentTeamId { get; set; }
-//    public DevelopmentTeam DevelopmentTeam { get; set; } = null!;
 //    public ICollection<ApiVersion> Versions { get; set; } = new List<ApiVersion>();
 //}
 

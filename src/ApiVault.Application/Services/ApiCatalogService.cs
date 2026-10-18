@@ -36,8 +36,6 @@ public sealed class ApiCatalogService(
             source = source.Where(x => x.Protocol == query.Protocol.Value);
         if (query.BusinessAreaId.HasValue)
             source = source.Where(x => x.BusinessAreaId == query.BusinessAreaId.Value);
-        if (query.DevelopmentTeamId.HasValue)
-            source = source.Where(x => x.DevelopmentTeamId == query.DevelopmentTeamId.Value);
         if (query.PublishingApplicationId.HasValue)
             source = source.Where(x => x.PublishingApplicationId == query.PublishingApplicationId.Value);
         if (query.LifecycleStatus.HasValue)
@@ -72,7 +70,6 @@ public sealed class ApiCatalogService(
                 OwnershipType = x.PublishingApplication.OwnershipType,
                 Protocol = x.Protocol,
                 BusinessArea = x.BusinessArea.Name,
-                DevelopmentTeam = x.DevelopmentTeam.Name,
                 CurrentVersion = x.Versions.Where(v => v.IsCurrent).Select(v => v.Version).FirstOrDefault(),
                 CurrentLifecycleStatus = x.Versions.Where(v => v.IsCurrent)
                     .Select(v => (ApiLifecycleStatus?)v.LifecycleStatus).FirstOrDefault(),
@@ -94,7 +91,6 @@ public sealed class ApiCatalogService(
         var entity = await dbContext.ApiAssets
             .AsNoTracking()
             .Include(x => x.BusinessArea)
-            .Include(x => x.DevelopmentTeam)
             .Include(x => x.PublishingApplication)
                 .ThenInclude(x => x.Vendor)
             .Include(x => x.Versions)
@@ -141,8 +137,7 @@ public sealed class ApiCatalogService(
             CreatorEmail = creator.Email,
             VendorName = publishingApplication.Vendor?.Name,
             ExternalReferenceUrl = request.ExternalReferenceUrl?.Trim(),
-            BusinessAreaId = publishingApplication.BusinessAreaId!.Value,
-            DevelopmentTeamId = publishingApplication.OwnerTeamId!.Value
+            BusinessAreaId = publishingApplication.BusinessAreaId!.Value
         };
 
         dbContext.ApiAssets.Add(entity);
@@ -170,7 +165,6 @@ public sealed class ApiCatalogService(
         entity.VendorName = publishingApplication.Vendor?.Name;
         entity.ExternalReferenceUrl = request.ExternalReferenceUrl?.Trim();
         entity.BusinessAreaId = publishingApplication.BusinessAreaId!.Value;
-        entity.DevelopmentTeamId = publishingApplication.OwnerTeamId!.Value;
         await dbContext.SaveChangesAsync(cancellationToken);
         return await GetAsync(id, cancellationToken);
     }
@@ -593,14 +587,6 @@ public sealed class ApiCatalogService(
         return MapEnvironment(environment);
     }
 
-    private async Task EnsureLookupValuesExistAsync(Guid businessAreaId, Guid teamId, CancellationToken cancellationToken)
-    {
-        if (!await dbContext.BusinessAreas.AnyAsync(x => x.Id == businessAreaId, cancellationToken))
-            throw new RequestValidationException("Business area does not exist.");
-        if (!await dbContext.DevelopmentTeams.AnyAsync(x => x.Id == teamId, cancellationToken))
-            throw new RequestValidationException("Development team does not exist.");
-    }
-
     private async Task EnsureVersionBelongsToApiAsync(Guid apiId, Guid versionId, CancellationToken cancellationToken)
     {
         if (!await dbContext.ApiVersions.AnyAsync(x => x.Id == versionId && x.ApiAssetId == apiId, cancellationToken))
@@ -694,8 +680,8 @@ public sealed class ApiCatalogService(
         var application = await dbContext.Projects.AsNoTracking().Include(x => x.Vendor)
             .SingleOrDefaultAsync(x => x.Id == applicationId && x.Status == ProjectStatus.Active, cancellationToken)
             ?? throw new RequestValidationException("Publishing application does not exist or is inactive.");
-        if (!application.BusinessAreaId.HasValue || !application.OwnerTeamId.HasValue)
-            throw new RequestValidationException("Complete the publishing application's business area and owner team before registering an API.");
+        if (!application.BusinessAreaId.HasValue)
+            throw new RequestValidationException("Complete the publishing application's business area before registering an API.");
         return application;
     }
 
@@ -713,7 +699,6 @@ public sealed class ApiCatalogService(
         VendorName = entity.PublishingApplication.Vendor?.Name,
         ExternalReferenceUrl = entity.ExternalReferenceUrl,
         BusinessArea = new LookupResponse { Id = entity.BusinessArea.Id, Code = entity.BusinessArea.Code, Name = entity.BusinessArea.Name },
-        DevelopmentTeam = new LookupResponse { Id = entity.DevelopmentTeam.Id, Code = entity.DevelopmentTeam.Code, Name = entity.DevelopmentTeam.Name },
         Versions = entity.Versions.OrderByDescending(x => x.IsCurrent).ThenByDescending(x => x.CreatedAtUtc).Select(MapVersion).ToList()
     };
 
@@ -839,8 +824,6 @@ public sealed class ApiCatalogService(
 //            source = source.Where(x => x.Protocol == query.Protocol.Value);
 //        if (query.BusinessAreaId.HasValue)
 //            source = source.Where(x => x.BusinessAreaId == query.BusinessAreaId.Value);
-//        if (query.DevelopmentTeamId.HasValue)
-//            source = source.Where(x => x.DevelopmentTeamId == query.DevelopmentTeamId.Value);
 //        if (query.LifecycleStatus.HasValue)
 //            source = source.Where(x => x.Versions.Any(v => v.LifecycleStatus == query.LifecycleStatus.Value));
 
@@ -857,7 +840,6 @@ public sealed class ApiCatalogService(
 //                OwnershipType = x.OwnershipType,
 //                Protocol = x.Protocol,
 //                BusinessArea = x.BusinessArea.Name,
-//                DevelopmentTeam = x.DevelopmentTeam.Name,
 //                CurrentVersion = x.Versions.Where(v => v.IsCurrent).Select(v => v.Version).FirstOrDefault(),
 //                CurrentLifecycleStatus = x.Versions.Where(v => v.IsCurrent)
 //                    .Select(v => (ApiLifecycleStatus?)v.LifecycleStatus).FirstOrDefault(),
@@ -879,7 +861,6 @@ public sealed class ApiCatalogService(
 //        var entity = await dbContext.ApiAssets
 //            .AsNoTracking()
 //            .Include(x => x.BusinessArea)
-//            .Include(x => x.DevelopmentTeam)
 //            .Include(x => x.Versions)
 //                .ThenInclude(x => x.Endpoints)
 //            .Include(x => x.Versions)
@@ -893,7 +874,6 @@ public sealed class ApiCatalogService(
 
 //    public async Task<ApiDetailResponse> CreateAsync(CreateApiRequest request, CancellationToken cancellationToken)
 //    {
-//        await EnsureLookupValuesExistAsync(request.BusinessAreaId, request.DevelopmentTeamId, cancellationToken);
 
 //        var duplicate = await dbContext.ApiAssets.AnyAsync(
 //            x => x.Name.ToUpper() == request.Name.Trim().ToUpper() &&
@@ -913,7 +893,6 @@ public sealed class ApiCatalogService(
 //            VendorName = request.VendorName?.Trim(),
 //            ExternalReferenceUrl = request.ExternalReferenceUrl?.Trim(),
 //            BusinessAreaId = request.BusinessAreaId,
-//            DevelopmentTeamId = request.DevelopmentTeamId
 //        };
 
 //        dbContext.ApiAssets.Add(entity);
@@ -923,7 +902,6 @@ public sealed class ApiCatalogService(
 
 //    public async Task<ApiDetailResponse> UpdateAsync(Guid id, CreateApiRequest request, CancellationToken cancellationToken)
 //    {
-//        await EnsureLookupValuesExistAsync(request.BusinessAreaId, request.DevelopmentTeamId, cancellationToken);
 //        var entity = await dbContext.ApiAssets.SingleOrDefaultAsync(x => x.Id == id, cancellationToken)
 //            ?? throw new NotFoundException("API registration was not found.");
 
@@ -943,7 +921,6 @@ public sealed class ApiCatalogService(
 //        entity.VendorName = request.VendorName?.Trim();
 //        entity.ExternalReferenceUrl = request.ExternalReferenceUrl?.Trim();
 //        entity.BusinessAreaId = request.BusinessAreaId;
-//        entity.DevelopmentTeamId = request.DevelopmentTeamId;
 //        await dbContext.SaveChangesAsync(cancellationToken);
 //        return await GetAsync(id, cancellationToken);
 //    }
@@ -1239,14 +1216,6 @@ public sealed class ApiCatalogService(
 //        return MapEnvironment(environment);
 //    }
 
-//    private async Task EnsureLookupValuesExistAsync(Guid businessAreaId, Guid teamId, CancellationToken cancellationToken)
-//    {
-//        if (!await dbContext.BusinessAreas.AnyAsync(x => x.Id == businessAreaId, cancellationToken))
-//            throw new RequestValidationException("Business area does not exist.");
-//        if (!await dbContext.DevelopmentTeams.AnyAsync(x => x.Id == teamId, cancellationToken))
-//            throw new RequestValidationException("Development team does not exist.");
-//    }
-
 //    private async Task EnsureVersionBelongsToApiAsync(Guid apiId, Guid versionId, CancellationToken cancellationToken)
 //    {
 //        if (!await dbContext.ApiVersions.AnyAsync(x => x.Id == versionId && x.ApiAssetId == apiId, cancellationToken))
@@ -1295,7 +1264,6 @@ public sealed class ApiCatalogService(
 //        VendorName = entity.VendorName,
 //        ExternalReferenceUrl = entity.ExternalReferenceUrl,
 //        BusinessArea = new LookupResponse { Id = entity.BusinessArea.Id, Code = entity.BusinessArea.Code, Name = entity.BusinessArea.Name },
-//        DevelopmentTeam = new LookupResponse { Id = entity.DevelopmentTeam.Id, Code = entity.DevelopmentTeam.Code, Name = entity.DevelopmentTeam.Name },
 //        Versions = entity.Versions.OrderByDescending(x => x.IsCurrent).ThenByDescending(x => x.CreatedAtUtc).Select(MapVersion).ToList()
 //    };
 

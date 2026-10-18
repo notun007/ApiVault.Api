@@ -18,4 +18,8 @@ public sealed class SecurityController(SecurityService service) : ControllerBase
     [HttpGet("roles/{roleId:guid}/permissions")] public async Task<ActionResult<IReadOnlyList<RolePermissionResponse>>> RolePermissions(Guid roleId, CancellationToken ct) => Ok(await service.GetRolePermissionsAsync(roleId, ct));
     [HttpPut("roles/{roleId:guid}/permissions")] public async Task<IActionResult> UpdateRolePermissions(Guid roleId, UpdateRolePermissionsRequest request, CancellationToken ct)
     { await service.UpdateRolePermissionsAsync(roleId, request, ct); return NoContent(); }
+    [HttpGet("api-access/catalog")] public async Task<ActionResult<IReadOnlyList<ApiAccessCatalogApplicationResponse>>> ApiAccessCatalog(CancellationToken ct) => Ok(await service.GetApiAccessCatalogAsync(ct));
+    [HttpGet("users/{userId:guid}/api-access")] public async Task<ActionResult<IReadOnlyList<UserApiAccessGrantResponse>>> UserApiAccess(Guid userId, CancellationToken ct) => Ok(await service.GetUserApiAccessAsync(userId, ct));
+    [HttpPut("users/{userId:guid}/api-access")] public async Task<IActionResult> UpdateUserApiAccess(Guid userId, SaveUserApiAccessRequest request, CancellationToken ct)
+    { await service.UpdateUserApiAccessAsync(userId, request, ct); return NoContent(); }
 }

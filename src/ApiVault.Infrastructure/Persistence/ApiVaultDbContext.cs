@@ -11,8 +11,6 @@ public sealed class ApiVaultDbContext(
     IUserContext userContext) : DbContext(options), IApplicationDbContext
 {
     public DbSet<BusinessArea> BusinessAreas => Set<BusinessArea>();
-    public DbSet<DevelopmentTeam> DevelopmentTeams => Set<DevelopmentTeam>();
-
     public DbSet<ApiAsset> ApiAssets => Set<ApiAsset>();
     public DbSet<ApiVersion> ApiVersions => Set<ApiVersion>();
     public DbSet<ApiEndpoint> ApiEndpoints => Set<ApiEndpoint>();
@@ -28,6 +26,9 @@ public sealed class ApiVaultDbContext(
     public DbSet<SecurityScreen> SecurityScreens => Set<SecurityScreen>();
     public DbSet<AppUserRole> AppUserRoles => Set<AppUserRole>();
     public DbSet<RolePermission> RolePermissions => Set<RolePermission>();
+    public DbSet<UserApiAccessGrant> UserApiAccessGrants => Set<UserApiAccessGrant>();
+    public DbSet<UserApiAccessAction> UserApiAccessActions => Set<UserApiAccessAction>();
+    public DbSet<UserApiAccessAudit> UserApiAccessAudits => Set<UserApiAccessAudit>();
     public DbSet<TestExecution> TestExecutions => Set<TestExecution>();
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
 

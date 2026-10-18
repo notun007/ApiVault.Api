@@ -181,18 +181,29 @@ FROM (
 ) v;
 
 ALTER TABLE "PROJECT_REGISTRY"
-    MODIFY ("BusinessAreaId" NULL, "OwnerTeamId" NULL);
+    MODIFY ("BusinessAreaId" NULL);
+ALTER TABLE "PROJECT_REGISTRY"
+    DROP CONSTRAINT "FK_PROJECT_REGISTRY_DEV_TEAM_OwnerTeamId";
+DROP INDEX "IX_PROJECT_REGISTRY_OwnerTeamId";
+ALTER TABLE "PROJECT_REGISTRY"
+    DROP COLUMN "OwnerTeamId";
+ALTER TABLE "API_ASSET"
+    DROP CONSTRAINT "FK_API_ASSET_DEV_TEAM_DevelopmentTeamId";
+DROP INDEX "IX_API_ASSET_DevelopmentTeamId";
+ALTER TABLE "API_ASSET"
+    DROP COLUMN "DevelopmentTeamId";
+DROP TABLE "DEV_TEAM" CASCADE CONSTRAINTS;
 ALTER TABLE "PROJECT_REGISTRY"
     ADD ("OwnershipType" NVARCHAR2(30) DEFAULT 'Internal' NOT NULL,
          "VendorId" RAW(16));
 
 INSERT INTO "PROJECT_REGISTRY"
     ("Id", "Code", "Name", "Description", "Criticality", "Status",
-     "BusinessAreaId", "OwnerTeamId", "OwnershipType", "VendorId",
+     "BusinessAreaId", "OwnershipType", "VendorId",
      "CreatedAtUtc", "CreatedBy", "UpdatedAtUtc", "UpdatedBy")
 SELECT ap."Id", ap."Code", ap."Name", ap."Description", 'Medium',
        CASE WHEN ap."IsActive" = 1 THEN 'Active' ELSE 'Inactive' END,
-       NULL, NULL, 'Internal', NULL,
+       NULL, 'Internal', NULL,
        ap."CreatedAtUtc", ap."CreatedBy", ap."UpdatedAtUtc", ap."UpdatedBy"
 FROM "API_PROJECT" ap
 WHERE NOT EXISTS (
