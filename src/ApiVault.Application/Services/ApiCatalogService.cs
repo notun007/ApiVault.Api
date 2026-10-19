@@ -11,7 +11,8 @@ namespace ApiVault.Application.Services;
 public sealed class ApiCatalogService(
     IApplicationDbContext dbContext,
     ISecretProtector secretProtector,
-    IApiAuthenticationProfileResolver authenticationResolver)
+    IApiAuthenticationProfileResolver authenticationResolver,
+    ApiAccessAuthorizationService accessAuthorization)
 {
     private static readonly HashSet<string> SupportedMethods = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -20,7 +21,8 @@ public sealed class ApiCatalogService(
 
     public async Task<PagedResult<ApiSummaryResponse>> SearchAsync(ApiSearchQuery query, CancellationToken cancellationToken)
     {
-        var source = dbContext.ApiAssets.AsNoTracking().AsQueryable();
+        var source = accessAuthorization.ApplyReadFilter(
+            dbContext.ApiAssets.AsNoTracking().AsQueryable());
 
         if (!string.IsNullOrWhiteSpace(query.Search))
         {
@@ -88,6 +90,7 @@ public sealed class ApiCatalogService(
 
     public async Task<ApiDetailResponse> GetAsync(Guid id, CancellationToken cancellationToken)
     {
+        var accessScope = await accessAuthorization.GetApiReadScopeAsync(id, cancellationToken);
         var entity = await dbContext.ApiAssets
             .AsNoTracking()
             .Include(x => x.BusinessArea)
@@ -107,7 +110,7 @@ public sealed class ApiCatalogService(
             .SingleOrDefaultAsync(x => x.Id == id, cancellationToken)
             ?? throw new NotFoundException("API registration was not found.");
 
-        return MapApiDetail(entity);
+        return MapApiDetail(entity, accessScope);
     }
 
     public async Task<ApiDetailResponse> CreateAsync(
@@ -333,6 +336,11 @@ public sealed class ApiCatalogService(
         TestAuthenticationProfileRequest request,
         CancellationToken cancellationToken)
     {
+        await accessAuthorization.EnsureVersionEnvironmentReadAccessAsync(
+            versionId,
+            request.ApiEnvironmentId,
+            cancellationToken);
+
         var profile = await dbContext.ApiAuthenticationProfiles.AsNoTracking()
             .Include(x => x.ApiVersion)
             .Include(x => x.TokenEndpoint)
@@ -568,6 +576,7 @@ public sealed class ApiCatalogService(
 
     public async Task<ApiVersionResponse> GetVersionAsync(Guid versionId, CancellationToken cancellationToken)
     {
+        var accessScope = await accessAuthorization.GetVersionReadScopeAsync(versionId, cancellationToken);
         var entity = await dbContext.ApiVersions.AsNoTracking()
             .Include(x => x.Endpoints)
             .Include(x => x.AuthenticationProfile)
@@ -576,7 +585,7 @@ public sealed class ApiCatalogService(
                 .ThenInclude(x => x.Secrets)
             .SingleOrDefaultAsync(x => x.Id == versionId, cancellationToken)
             ?? throw new NotFoundException("API version was not found.");
-        return MapVersion(entity);
+        return MapVersion(entity, accessScope);
     }
 
     private async Task<EnvironmentResponse> GetEnvironmentAsync(Guid environmentId, CancellationToken cancellationToken)
@@ -685,7 +694,7 @@ public sealed class ApiCatalogService(
         return application;
     }
 
-    private static ApiDetailResponse MapApiDetail(ApiAsset entity) => new()
+    private static ApiDetailResponse MapApiDetail(ApiAsset entity, ApiReadScope accessScope) => new()
     {
         Id = entity.Id,
         Name = entity.Name,
@@ -699,10 +708,15 @@ public sealed class ApiCatalogService(
         VendorName = entity.PublishingApplication.Vendor?.Name,
         ExternalReferenceUrl = entity.ExternalReferenceUrl,
         BusinessArea = new LookupResponse { Id = entity.BusinessArea.Id, Code = entity.BusinessArea.Code, Name = entity.BusinessArea.Name },
-        Versions = entity.Versions.OrderByDescending(x => x.IsCurrent).ThenByDescending(x => x.CreatedAtUtc).Select(MapVersion).ToList()
+        Versions = entity.Versions
+            .Where(x => accessScope.IsUnrestricted || accessScope.VersionIds.Contains(x.Id))
+            .OrderByDescending(x => x.IsCurrent)
+            .ThenByDescending(x => x.CreatedAtUtc)
+            .Select(x => MapVersion(x, accessScope))
+            .ToList()
     };
 
-    private static ApiVersionResponse MapVersion(ApiVersion entity) => new()
+    private static ApiVersionResponse MapVersion(ApiVersion entity, ApiReadScope accessScope) => new()
     {
         Id = entity.Id,
         Version = entity.Version,
@@ -731,8 +745,17 @@ public sealed class ApiCatalogService(
             Purpose = x.Purpose,
             IsRequired = x.IsRequired
         }).ToList(),
-        Endpoints = entity.Endpoints.OrderBy(x => x.RelativePath).ThenBy(x => x.HttpMethod).Select(MapEndpoint).ToList(),
-        Environments = entity.Environments.OrderBy(x => x.EnvironmentType).Select(MapEnvironment).ToList()
+        Endpoints = entity.Endpoints
+            .Where(x => accessScope.IsUnrestricted || accessScope.EndpointIds.Contains(x.Id))
+            .OrderBy(x => x.RelativePath)
+            .ThenBy(x => x.HttpMethod)
+            .Select(MapEndpoint)
+            .ToList(),
+        Environments = entity.Environments
+            .Where(x => accessScope.IsUnrestricted || accessScope.EnvironmentIds.Contains(x.Id))
+            .OrderBy(x => x.EnvironmentType)
+            .Select(MapEnvironment)
+            .ToList()
     };
 
     private static EndpointResponse MapEndpoint(ApiEndpoint entity) => new()

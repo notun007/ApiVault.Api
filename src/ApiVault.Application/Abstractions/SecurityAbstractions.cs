@@ -4,7 +4,9 @@ namespace ApiVault.Application.Abstractions;
 
 public interface IUserContext
 {
+    Guid? UserId { get; }
     string UserName { get; }
+    bool IsInRole(string role);
     string? IpAddress { get; }
     string? CorrelationId { get; }
 }

@@ -30,6 +30,7 @@ public sealed class ExceptionHandlingMiddleware(
             NotFoundException => (StatusCodes.Status404NotFound, "Resource not found", exception.Message),
             ConflictException => (StatusCodes.Status409Conflict, "Conflict", exception.Message),
             RequestValidationException => (StatusCodes.Status400BadRequest, "Request validation failed", exception.Message),
+            ForbiddenException => (StatusCodes.Status403Forbidden, "Forbidden", exception.Message),
             UnauthorizedAccessException => (StatusCodes.Status401Unauthorized, "Unauthorized", exception.Message),
             _ => (StatusCodes.Status500InternalServerError, "Unexpected server error",
                 context.RequestServices.GetRequiredService<IHostEnvironment>().IsDevelopment()

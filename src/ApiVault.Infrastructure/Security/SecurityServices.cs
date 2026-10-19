@@ -15,7 +15,13 @@ namespace ApiVault.Infrastructure.Security;
 
 public sealed class HttpUserContext(IHttpContextAccessor accessor) : IUserContext
 {
+    public Guid? UserId => Guid.TryParse(
+        accessor.HttpContext?.User.FindFirstValue(ClaimTypes.NameIdentifier),
+        out var userId)
+        ? userId
+        : null;
     public string UserName => accessor.HttpContext?.User.Identity?.Name ?? "system";
+    public bool IsInRole(string role) => accessor.HttpContext?.User.IsInRole(role) == true;
     public string? IpAddress => accessor.HttpContext?.Connection.RemoteIpAddress?.ToString();
     public string? CorrelationId => accessor.HttpContext?.TraceIdentifier;
 }

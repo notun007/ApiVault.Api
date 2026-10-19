@@ -13,7 +13,8 @@ public sealed class ApiTestService(
     IApiTestExecutor executor,
     IApiAuthenticationProfileResolver authenticationResolver,
     ISecretProtector secretProtector,
-    IUserContext userContext)
+    IUserContext userContext,
+    ApiAccessAuthorizationService accessAuthorization)
 {
     public async Task<TestExecutionResponse> ExecuteAsync(ExecuteApiTestRequest request, CancellationToken cancellationToken)
     {
@@ -25,6 +26,12 @@ public sealed class ApiTestService(
                     .ThenInclude(x => x!.TokenEndpoint)
             .SingleOrDefaultAsync(x => x.Id == request.ApiEndpointId, cancellationToken)
             ?? throw new NotFoundException("API endpoint was not found.");
+
+        await accessAuthorization.EnsureEndpointAccessAsync(
+            request.ApiEndpointId,
+            request.ApiEnvironmentId,
+            UserApiAccessAction.Read,
+            cancellationToken);
 
         var environment = await dbContext.ApiEnvironments.AsNoTracking()
             .Include(x => x.Secrets)
@@ -110,7 +117,8 @@ public sealed class ApiTestService(
         CancellationToken cancellationToken)
     {
         take = Math.Clamp(take, 1, 200);
-        var source = dbContext.TestExecutions.AsNoTracking().AsQueryable();
+        var source = accessAuthorization.ApplyHistoryReadFilter(
+            dbContext.TestExecutions.AsNoTracking().AsQueryable());
         if (endpointId.HasValue) source = source.Where(x => x.ApiEndpointId == endpointId.Value);
         if (environmentId.HasValue) source = source.Where(x => x.ApiEnvironmentId == environmentId.Value);
 
