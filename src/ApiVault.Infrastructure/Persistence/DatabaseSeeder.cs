@@ -1,4 +1,5 @@
 using ApiVault.Application.Abstractions;
+using ApiVault.Application.Services;
 using ApiVault.Domain.Entities;
 using ApiVault.Domain.Enums;
 using ApiVault.Infrastructure.Options;
@@ -11,6 +12,7 @@ namespace ApiVault.Infrastructure.Persistence;
 public sealed class DatabaseSeeder(
     ApiVaultDbContext dbContext,
     IPasswordHasher passwordHasher,
+    NavigationService navigationService,
     IOptions<DatabaseInitializationOptions> options,
     ILogger<DatabaseSeeder> logger)
 {
@@ -83,8 +85,9 @@ public sealed class DatabaseSeeder(
 
         await dbContext.SaveChangesAsync(cancellationToken);
 
+        await navigationService.InitializeAsync(cancellationToken);
         var seededRoles = await dbContext.SecurityRoles.Where(x => x.IsSystemRole).ToListAsync(cancellationToken);
-        var allScreens = await dbContext.SecurityScreens.ToListAsync(cancellationToken);
+        var allScreens = await dbContext.SecurityScreens.Where(x => !x.Route.StartsWith(NavigationService.GroupPrefix)).ToListAsync(cancellationToken);
         var allPermissions = await dbContext.SecurityPermissions.ToListAsync(cancellationToken);
         foreach (var role in seededRoles)
             foreach (var screen in allScreens)

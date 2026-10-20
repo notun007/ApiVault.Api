@@ -36,6 +36,7 @@ public sealed class SecurityScreenConfiguration : IEntityTypeConfiguration<Secur
     {
         b.ToTable("SEC_SCREEN");
         ConfigurationHelpers.ConfigureAudit(b);
+        b.Property(x => x.UpdatedAtUtc).IsConcurrencyToken();
         b.Property(x => x.Code).HasMaxLength(80).IsRequired();
         b.Property(x => x.Name).HasMaxLength(150).IsRequired();
         b.Property(x => x.Route).HasMaxLength(300).IsRequired();

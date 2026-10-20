@@ -50,7 +50,7 @@ public sealed class SecurityService(IApplicationDbContext db)
             .ToListAsync(ct);
 
     public async Task<IReadOnlyList<SecurityScreenResponse>> GetScreensAsync(CancellationToken ct) =>
-        await db.SecurityScreens.AsNoTracking().Where(x => x.IsActive).OrderBy(x => x.DisplayOrder)
+        await db.SecurityScreens.AsNoTracking().Where(x => x.IsActive && !x.Route.StartsWith(NavigationService.GroupPrefix)).OrderBy(x => x.DisplayOrder)
             .Select(x => new SecurityScreenResponse
             {
                 Id = x.Id, Code = x.Code, Name = x.Name, Route = x.Route, Icon = x.Icon,
